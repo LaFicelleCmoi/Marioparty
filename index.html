@@ -3,12 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f2027">
+<meta name="description" content="Suivi du championnat Mario Party 2026 — classement, statistiques et podium.">
 <title>Mario Party 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="icon.png">
 </head>
 <body>
+
+<canvas id="bgCanvas"></canvas>
+<canvas id="fxCanvas"></canvas>
 
 <div id="cursor">⭐</div>
 
@@ -18,16 +23,24 @@
     <p>Veuillez fermer l'inspecteur pour continuer.</p>
 </div>
 
+<button id="soundToggle" onclick="toggleSound()" title="Activer / couper les sons">🔊</button>
+
 <div id="header">
     <img id="logoImg" src="icon.png" alt="Logo">
     <h1> Mario Party 2026</h1>
 </div>
 
+<div id="statsToggle" onclick="toggleStats()">📊 Stats</div>
 <div id="participantsToggle" onclick="toggleParticipants()">👥 Participants</div>
 <div id="rankingToggle" onclick="toggleRanking()">📋 Classement</div>
 
 <div id="typewriter-container">
     <span id="typewriter-text"></span><span id="typewriter-cursor"></span>
+</div>
+
+<div id="yearProgress">
+    <div class="yp-label" id="ypLabel"></div>
+    <div class="yp-track"><div class="yp-fill" id="ypFill"></div></div>
 </div>
 
 <div class="container" id="container"></div>
@@ -54,13 +67,20 @@
     <div id="fullRanking"></div>
 </div>
 
+<!-- Panel Statistiques -->
+<div id="statsPanel">
+    <button class="close-btn" onclick="closeAll()">✖</button>
+    <h2>📊 Statistiques</h2>
+    <div id="statsContent"></div>
+</div>
+
 <!-- Panel Participants -->
 <div id="participantsPanel">
     <button class="panel-close" onclick="closeAll()">✖</button>
     <h2>👥 Participants</h2>
-    <div class="part-subtitle">Joueurs enregistrés</div>
+    <div class="part-subtitle">Joueurs enregistrés — cliquez sur un nom pour voir sa fiche</div>
     <div class="part-add-row">
-        <input type="text" id="partInput" placeholder="Nom du joueur..."
+        <input type="text" id="partInput" placeholder="Nom du joueur..." maxlength="24"
                onkeydown="if(event.key==='Enter') addParticipant()">
         <button onclick="addParticipant()">＋</button>
     </div>
@@ -68,18 +88,25 @@
     <div id="partList"></div>
 </div>
 
+<!-- Fiche joueur -->
+<div id="playerCardOverlay" class="modal-overlay" onclick="if(event.target===this) closePlayerCard()">
+    <div class="modal-box player-card" id="playerCardBox"></div>
+</div>
+
 <!-- Modal -->
 <div id="customModal" class="modal-overlay">
     <div class="modal-box">
         <h3 id="modalTitle">Titre</h3>
         <p id="modalMessage" style="display:none"></p>
-        <input type="text" id="modalInput" class="modal-input" placeholder="Entrez un nom...">
+        <input type="text" id="modalInput" class="modal-input" placeholder="Entrez un nom..." maxlength="24">
         <div class="modal-buttons">
             <button class="modal-btn cancel" onclick="closeModal()">Annuler</button>
             <button class="modal-btn confirm" id="modalConfirmBtn">Valider</button>
         </div>
     </div>
 </div>
+
+<div id="toastContainer"></div>
 
 <footer>
     <div class="footer-container">

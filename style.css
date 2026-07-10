@@ -1,16 +1,32 @@
 /* POLICE (doit précéder toute autre règle pour être prise en compte) */
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
 
-/* === CURSEUR MARIO PARTY === */
+/* ============================================================
+   ACCESSIBILITÉ — mouvement réduit
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ============================================================
+   CURSEUR MARIO PARTY
+   ============================================================ */
+@media (pointer: fine) {
+    *, *::before, *::after { cursor: none !important; }
+}
+@media (pointer: coarse) {
+    #cursor { display: none; }
+}
+
 #cursor {
     position: fixed;
     left: -200px;
     top: -200px;
     width: 28px;
     height: 28px;
-    pointer-events: none; /* Rend le curseur "fantôme" pour pouvoir cliquer au travers */
+    pointer-events: none;
     z-index: 99999;
-    transform: translate(-50%, -50%); /* Centre parfaitement l'étoile sur le clic */
+    transform: translate(-50%, -50%);
     transition: transform 0.15s ease, filter 0.2s ease;
     font-size: 22px;
     line-height: 1;
@@ -20,22 +36,34 @@
             drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
     animation: cursorSpin 6s linear infinite;
 }
-
 #cursor.hovered {
     transform: translate(-50%, -50%) scale(1.5);
     filter: drop-shadow(0 0 6px rgba(0, 198, 255, 0.9))
             drop-shadow(0 0 14px rgba(0, 198, 255, 0.5));
     animation: cursorSpinFast 0.6s linear infinite;
 }
+@keyframes cursorSpin     { 0% { rotate: 0deg; } 100% { rotate: 360deg; } }
+@keyframes cursorSpinFast { 0% { rotate: 0deg; } 100% { rotate: 360deg; } }
 
-@keyframes cursorSpin {
-    0%   { rotate: 0deg; }
-    100% { rotate: 360deg; }
+.cursor-trail {
+    position: fixed;
+    z-index: 99998;
+    pointer-events: none;
+    color: #ffd700;
+    font-size: 11px;
+    transform: translate(-50%, -50%);
+    animation: trailFade 0.7s ease-out forwards;
 }
-@keyframes cursorSpinFast {
-    0%   { rotate: 0deg; }
-    100% { rotate: 360deg; }
+@keyframes trailFade {
+    0%   { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0;   transform: translate(-50%, 30%) scale(0.3) rotate(120deg); }
 }
+
+/* ============================================================
+   CANVAS (fond étoilé + confettis)
+   ============================================================ */
+#bgCanvas { position: fixed; inset: 0; z-index: -1;   pointer-events: none; }
+#fxCanvas { position: fixed; inset: 0; z-index: 3000; pointer-events: none; }
 
 /* ============================================================
    BASE
@@ -60,9 +88,26 @@ body {
 #logoImg {
     position: absolute; left: 50%; transform: translateX(-260px);
     height: 80px; width: 80px; object-fit: contain;
+    filter: drop-shadow(0 0 12px rgba(0,198,255,0.35));
 }
 h1 { text-align: center; padding: 20px; font-size: 2.5em; text-shadow: 0 2px 10px rgba(0,0,0,0.5); margin: 0; }
 
+/* ============================================================
+   BOUTON SON
+   ============================================================ */
+#soundToggle {
+    position: fixed; top: 20px; left: 20px; z-index: 1002;
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 1px solid rgba(0,198,255,0.5);
+    background: rgba(10,25,40,0.85); color: white;
+    font-size: 1.05em; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: 0.3s; padding: 0;
+}
+#soundToggle:hover { background: rgba(0,198,255,0.25); transform: scale(1.08); }
+
+/* ============================================================
+   TYPEWRITER
+   ============================================================ */
 #typewriter-container {
     text-align: center;
     padding: 6px 0 18px 0;
@@ -81,10 +126,7 @@ h1 { text-align: center; padding: 20px; font-size: 2.5em; text-shadow: 0 2px 10p
     vertical-align: middle;
     animation: blink 0.7s infinite;
 }
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0; }
-}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
 #typewriter-text {
     font-family: 'Fredoka One', cursive;
@@ -100,21 +142,51 @@ h1 { text-align: center; padding: 20px; font-size: 2.5em; text-shadow: 0 2px 10p
     animation: cartoonBounce 0.4s ease-in-out infinite alternate;
 }
 @keyframes cartoonBounce {
-    0%  { transform: scaleY(1)   scaleX(1); }
+    0%  { transform: scaleY(1)    scaleX(1); }
     100%{ transform: scaleY(1.04) scaleX(0.97); }
 }
 
-.container {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px; padding: 20px;
+/* ============================================================
+   PROGRESSION ANNUELLE
+   ============================================================ */
+#yearProgress { max-width: 640px; margin: 0 auto 14px; padding: 0 20px; }
+.yp-label {
+    text-align: center; font-size: 0.85em; opacity: 0.7;
+    margin-bottom: 6px; letter-spacing: 1px;
+}
+.yp-track {
+    height: 14px; background: rgba(0,0,0,0.35); border-radius: 8px;
+    overflow: hidden; border: 1px solid rgba(255,255,255,0.12);
+}
+.yp-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #00c6ff, #0072ff, #00c6ff);
+    background-size: 200% 100%;
+    animation: lavaFlow 3s linear infinite;
+    border-radius: 8px;
+    transition: width 0.8s ease;
 }
 
 /* ============================================================
    CARTES MOIS
    ============================================================ */
+.container {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px; padding: 20px;
+}
 .month {
     background: rgba(255,255,255,0.08); border-radius: 15px; padding: 15px;
     backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.month:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(0,198,255,0.15), 0 4px 15px rgba(0,0,0,0.3);
+}
+.month.animate-in { animation: cardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
 }
 .month h2 { text-align: center; margin-bottom: 5px; }
 
@@ -133,22 +205,25 @@ ul { list-style: none; padding: 0; }
 li {
     background: rgba(255,255,255,0.15); margin: 5px 0; padding: 8px;
     border-radius: 8px; display: flex; justify-content: space-between; align-items: center;
+    transition: background 0.2s ease, transform 0.2s ease;
 }
-.name { flex: 1; cursor: none; font-weight: 500; }
+li:hover { background: rgba(255,255,255,0.22); transform: translateX(3px); }
+.name { flex: 1; font-weight: 500; }
 .badge { margin-left: 5px; font-size: 1.1em; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)); }
 .passed { text-decoration: line-through; opacity: 0.5; }
 
 .buttons button {
     margin-left: 5px; border: none; padding: 5px 8px;
-    border-radius: 5px; cursor: none; font-size: 0.8em;
+    border-radius: 5px; font-size: 0.8em; transition: transform 0.15s ease;
 }
+.buttons button:hover { transform: scale(1.15); }
 .add-btn {
     margin-top: 10px; width: 100%; padding: 8px; border: none;
-    border-radius: 6px; cursor: none; background: #00c6ff; color: white;
-    font-weight: bold; transition: background 0.3s;
+    border-radius: 6px; background: #00c6ff; color: white;
+    font-weight: bold; transition: background 0.3s, transform 0.15s;
 }
-.add-btn:hover { background: #0072ff; }
-.add-btn:disabled { background: #555; cursor: not-allowed; opacity: 0.5; }
+.add-btn:hover:not(:disabled) { background: #0072ff; transform: scale(1.02); }
+.add-btn:disabled { background: #555; opacity: 0.5; }
 .edit-btn { background: orange; color: white; }
 .delete-btn { background: crimson; color: white; }
 
@@ -163,7 +238,6 @@ li {
 .podium { display: flex; align-items: flex-end; gap: 15px; }
 .podium div { text-align: center; padding: 10px; border-radius: 10px; min-width: 80px; position: relative; }
 
-/*KEYFRAMES POUR EFFET LAVE*/
 @keyframes lavaFlow {
     0%   { background-position: 0% 50%; }
     50%  { background-position: 100% 50%; }
@@ -198,12 +272,12 @@ li {
 }
 .backup-btn {
     background: #203a43; border: 1px solid #00c6ff; color: #00c6ff;
-    padding: 10px 20px; border-radius: 20px; cursor: none; margin: 0 10px; font-size: 0.9em; transition: 0.3s;
+    padding: 10px 20px; border-radius: 20px; margin: 0 10px; font-size: 0.9em; transition: 0.3s;
 }
 .backup-btn:hover { background: #00c6ff; color: white; }
 
 /* ============================================================
-   MODAL
+   MODAL + FICHE JOUEUR
    ============================================================ */
 .modal-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
@@ -213,7 +287,9 @@ li {
 .modal-box {
     background: linear-gradient(135deg, #2c3e50, #1a1a1a); padding: 25px;
     border-radius: 15px; width: 90%; max-width: 400px; border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; transform: scale(0.9); transition: transform 0.2s;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
+    transform: scale(0.9); transition: transform 0.2s;
+    position: relative;
 }
 .modal-overlay.open .modal-box { transform: scale(1); }
 .modal-box h3 { margin-top: 0; color: #00c6ff; }
@@ -224,9 +300,26 @@ li {
 }
 .modal-input:focus { outline: 2px solid #00c6ff; }
 .modal-buttons { display: flex; justify-content: center; gap: 10px; }
-.modal-btn { padding: 8px 20px; border-radius: 8px; border: none; cursor: none; font-weight: bold; transition: 0.2s; }
+.modal-btn { padding: 8px 20px; border-radius: 8px; border: none; font-weight: bold; transition: 0.2s; }
 .modal-btn.cancel  { background: #444; color: white; }
 .modal-btn.confirm { background: #00c6ff; color: white; }
+.modal-btn:hover { transform: scale(1.05); }
+
+.player-card { max-width: 460px; }
+.pc-name { font-size: 1.5em; color: #ffd700 !important; margin: 5px 0 16px; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+.pc-chips { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; flex-wrap: wrap; }
+.pc-chip {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 10px 14px; min-width: 68px;
+}
+.pc-chip b { display: block; font-size: 1.3em; color: #00c6ff; }
+.pc-chip span { font-size: 0.62em; text-transform: uppercase; letter-spacing: 1px; opacity: 0.55; }
+.pc-sub {
+    font-size: 0.72em; letter-spacing: 2px; text-transform: uppercase;
+    opacity: 0.5; margin: 16px 0 8px; text-align: left;
+}
+.sparkline { width: 100%; height: 90px; background: rgba(0,0,0,0.25); border-radius: 10px; display: block; }
+.pc-mchart { height: 80px !important; background: rgba(0,0,0,0.25); border-radius: 10px; padding: 8px 6px 4px !important; box-sizing: border-box; }
 
 /* ============================================================
    BOUTONS FIXES
@@ -234,15 +327,22 @@ li {
 #rankingToggle {
     position: fixed; top: 20px; right: 20px;
     background: linear-gradient(135deg,#ffd700,#ffb700);
-    color: black; padding: 10px 18px; border-radius: 10px; cursor: none; font-weight: bold;
-    z-index: 1004; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: 0.3s;
+    color: black; padding: 10px 18px; border-radius: 10px; font-weight: bold;
+    z-index: 1002; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: 0.3s; user-select: none;
 }
 #participantsToggle {
     position: fixed; top: 20px; right: 180px;
     background: linear-gradient(135deg, #00c6ff, #0072ff);
-    color: white; padding: 10px 18px; border-radius: 10px; cursor: none; font-weight: bold;
-    z-index: 1003; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: 0.3s; user-select: none;
+    color: white; padding: 10px 18px; border-radius: 10px; font-weight: bold;
+    z-index: 1002; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: 0.3s; user-select: none;
 }
+#statsToggle {
+    position: fixed; top: 20px; left: 74px;
+    background: linear-gradient(135deg, #a855f7, #6d28d9);
+    color: white; padding: 10px 18px; border-radius: 10px; font-weight: bold;
+    z-index: 1002; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: 0.3s; user-select: none;
+}
+#rankingToggle:hover, #participantsToggle:hover, #statsToggle:hover { transform: translateY(-2px); }
 
 /* ============================================================
    OVERLAY
@@ -251,7 +351,7 @@ li {
 #rankingOverlay.open { display: block; }
 
 /* ============================================================
-   PANEL CLASSEMENT
+   PANEL CLASSEMENT (droite)
    ============================================================ */
 #rankingPanel {
     position: fixed; top: 0; right: -420px; width: 360px; height: 100%;
@@ -277,10 +377,63 @@ li {
 .ranking-item.silver { background: linear-gradient(90deg, rgba(192,192,192,0.15) 0%, rgba(192,192,192,0.5) 50%, rgba(192,192,192,0.15) 100%); border-left: 5px solid silver; background-size: 200% 100%; animation: lavaFlow 4s ease-in-out infinite; }
 .ranking-item.bronze { background: linear-gradient(90deg, rgba(205,127,50,0.15) 0%, rgba(205,127,50,0.5) 50%, rgba(205,127,50,0.15) 100%);  border-left: 5px solid #cd7f32; background-size: 200% 100%; animation: lavaFlow 4s ease-in-out infinite; }
 .ranking-item:not(.gold):not(.silver):not(.bronze) { opacity: 0.8; border-left: 5px solid transparent; }
+.ranking-rate { font-size: 0.72em; opacity: 0.5; flex-shrink: 0; }
 .ranking-score { font-weight: bold; opacity: 0.9; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.9em; flex-shrink: 0; }
 
 /* ============================================================
-   PANEL PARTICIPANTS
+   PANEL STATISTIQUES (gauche)
+   ============================================================ */
+#statsPanel {
+    position: fixed; top: 0; left: -460px; width: 400px; height: 100%;
+    background: linear-gradient(180deg,#111,#1c1c1c);
+    padding: 25px 20px; box-sizing: border-box;
+    transition: left 0.35s ease; overflow-y: auto; z-index: 1003;
+    box-shadow: 5px 0 25px rgba(0,0,0,0.7);
+}
+#statsPanel.open { left: 0; }
+#statsPanel h2 { text-align: center; margin-top: 10px; margin-bottom: 25px; font-size: 1.6em; padding-right: 40px; }
+
+.stat-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
+.stat-card {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 14px 10px; text-align: center;
+}
+.stat-card.wide { grid-column: span 2; }
+.stat-card b { display: block; font-size: 1.25em; color: #ffd700; margin-bottom: 4px; word-break: break-word; }
+.stat-card b small { font-size: 0.6em; opacity: 0.6; }
+.stat-card span { font-size: 0.68em; letter-spacing: 1px; text-transform: uppercase; opacity: 0.55; }
+
+.stats-block {
+    margin-bottom: 25px; background: rgba(255,255,255,0.03);
+    border-radius: 12px; padding: 14px;
+}
+.stats-block-title {
+    font-size: 0.8em; letter-spacing: 2px; text-transform: uppercase; opacity: 0.5;
+    margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;
+}
+
+.mchart { display: flex; align-items: flex-end; gap: 6px; height: 130px; padding: 10px 4px 4px; box-sizing: border-box; }
+.mc-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.mc-track {
+    width: 100%; height: 100%; background: rgba(255,255,255,0.07); border-radius: 4px;
+    display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
+}
+.mc-fill { width: 100%; background: linear-gradient(180deg, #00c6ff, #0072ff); border-radius: 4px 4px 0 0; transition: height 0.5s ease; }
+.mc-fill.full { background: linear-gradient(180deg, #ffd700, #ff8c00); }
+.mc-lbl { font-size: 0.62em; opacity: 0.5; }
+
+.tp-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.tp-name { width: 95px; font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+.tp-bar { flex: 1; height: 12px; background: rgba(255,255,255,0.07); border-radius: 6px; overflow: hidden; }
+.tp-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #00c6ff, #0072ff); transition: width 0.6s ease; }
+.tp-fill.c0 { background: linear-gradient(90deg, #ffd700, #ff9500); }
+.tp-fill.c1 { background: linear-gradient(90deg, #d8d8d8, #a8a9ad); }
+.tp-fill.c2 { background: linear-gradient(90deg, #cd7f32, #8b4513); }
+.tp-val { width: 60px; text-align: right; font-size: 0.85em; font-weight: bold; flex-shrink: 0; }
+.tp-val small { opacity: 0.5; font-weight: normal; }
+
+/* ============================================================
+   PANEL PARTICIPANTS (haut)
    ============================================================ */
 #participantsPanel {
     position: fixed; top: -100%; left: 0; width: 100%;
@@ -292,7 +445,7 @@ li {
     position: absolute; top: 18px; left: 20px;
     background: rgba(255,255,255,0.1); border: none; color: white;
     font-size: 1.2em; width: 35px; height: 35px; border-radius: 50%;
-    cursor: none; display: flex; align-items: center; justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     transition: background 0.2s; z-index: 10;
 }
 #participantsPanel .panel-close:hover { background: rgba(220,50,50,0.6); }
@@ -313,7 +466,7 @@ li {
 .part-add-row button {
     padding: 9px 14px; border: none; border-radius: 8px;
     background: linear-gradient(135deg,#00c6ff,#0072ff); color: white;
-    font-weight: bold; cursor: none; font-size: 1em; transition: opacity 0.2s;
+    font-weight: bold; font-size: 1em; transition: opacity 0.2s;
 }
 .part-add-row button:hover { opacity: 0.85; }
 .part-count { text-align: center; font-size: 0.78em; opacity: 0.4; margin-bottom: 15px; }
@@ -345,14 +498,15 @@ li {
 }
 
 .part-item-left { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%; }
-.part-name { font-weight: 600; font-size: 0.8em; word-break: break-word; line-height: 1.2; }
+.part-name { font-weight: 600; font-size: 0.8em; word-break: break-word; line-height: 1.2; transition: color 0.2s; }
+.part-name:hover { color: #00c6ff; text-decoration: underline; }
 .part-stats > span:first-child { font-size: 1em; font-weight: bold; color: #ffd700; text-shadow: 0 2px 5px rgba(0,0,0,0.8); margin-bottom: 5px; }
 
 .part-games-ctrl { display: flex; align-items: center; gap: 3px; justify-content: center; }
 .part-games-ctrl span { font-size: 1.5em; min-width: 24px; text-align: center; font-weight: bold; color: white; }
 .ctrl-btn {
     background: rgba(255,255,255,0.12); border: none; color: white;
-    width: 17px; height: 17px; border-radius: 50%; cursor: none;
+    width: 17px; height: 17px; border-radius: 50%;
     font-size: 0.7em; display: flex; align-items: center; justify-content: center;
     transition: background 0.2s; padding: 0; line-height: 1;
 }
@@ -362,7 +516,7 @@ li {
 .part-item-right { position: absolute; top: 4px; right: 4px; }
 .part-del {
     background: transparent; border: none; color: rgba(255,255,255,0.3);
-    border-radius: 50%; padding: 0; cursor: none; font-size: 0.75em;
+    border-radius: 50%; padding: 0; font-size: 0.75em;
     width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
     transition: color 0.2s;
 }
@@ -370,12 +524,38 @@ li {
 .part-empty { text-align: center; opacity: 0.35; font-style: italic; margin-top: 40px; font-size: 0.95em; }
 
 /* ============================================================
+   TOASTS
+   ============================================================ */
+#toastContainer {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 4000; display: flex; flex-direction: column; gap: 10px;
+    align-items: center; pointer-events: none;
+}
+.toast {
+    pointer-events: auto; display: flex; align-items: center; gap: 10px;
+    background: rgba(10,25,40,0.95); border: 1px solid rgba(0,198,255,0.4);
+    padding: 12px 18px; border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    opacity: 0; transform: translateY(20px); transition: opacity 0.3s ease, transform 0.3s ease;
+    max-width: 90vw; font-size: 0.95em;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast-ic { font-size: 1.2em; }
+.toast-msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55vw; }
+.toast-action {
+    background: linear-gradient(135deg, #00c6ff, #0072ff); border: none; color: white;
+    font-weight: bold; padding: 6px 14px; border-radius: 8px; font-size: 0.9em;
+    transition: transform 0.15s ease; flex-shrink: 0;
+}
+.toast-action:hover { transform: scale(1.06); }
+
+/* ============================================================
    CLOSE BTN
    ============================================================ */
 .close-btn {
     position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1);
     border: none; color: white; font-size: 1.2em; width: 35px; height: 35px;
-    border-radius: 50%; cursor: none; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
     transition: background 0.2s;
 }
 .close-btn:hover { background: rgba(220,50,50,0.6); }
@@ -432,6 +612,8 @@ footer::before {
     #logoImg { height: 60px; width: 60px; left: 12px; transform: none; }
     #rankingToggle { top: auto; bottom: 20px; right: 20px; font-size: 0.85em; padding: 9px 14px; }
     #participantsToggle { top: auto; bottom: 20px; right: 160px; font-size: 0.85em; padding: 9px 14px; }
+    #statsToggle { top: auto; bottom: 20px; left: 14px; font-size: 0.85em; padding: 9px 14px; }
+    #soundToggle { top: 14px; left: 14px; width: 38px; height: 38px; }
     .container { grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 14px; }
     #partList { grid-template-columns: repeat(3, 1fr); }
     .bottom { flex-direction: column; align-items: center; gap: 16px; padding: 16px; }
@@ -441,7 +623,10 @@ footer::before {
     .third  { height: 58px; }
     #rankingPanel { width: 85vw; max-width: 320px; padding: 20px 16px; }
     #rankingPanel h2 { font-size: 1.35em; padding-right: 44px; }
+    #statsPanel { width: 85vw; max-width: 360px; padding: 20px 16px; }
+    #statsPanel h2 { font-size: 1.35em; padding-right: 44px; }
     .ranking-item { padding: 10px 12px; font-size: 0.95em; }
+    #toastContainer { bottom: 72px; }
 }
 
 /* ── Mobile (≤ 600px) ── */
@@ -452,14 +637,21 @@ footer::before {
     h1 { font-size: 1.3em; padding: 10px 50px; }
     #typewriter-container { font-size: 0.88em; padding: 4px 10px 12px; }
     #typewriter-text { font-size: 1.2em; }
+    #yearProgress { padding: 0 14px; }
+    .yp-label { font-size: 0.78em; }
     #rankingToggle { bottom: 14px; right: 14px; top: auto; font-size: 0.8em; padding: 8px 12px; border-radius: 20px; }
     #participantsToggle { bottom: 14px; right: 130px; top: auto; font-size: 0.8em; padding: 8px 12px; border-radius: 20px; }
+    #statsToggle { bottom: 14px; left: 10px; top: auto; font-size: 0.8em; padding: 8px 12px; border-radius: 20px; }
+    #soundToggle { top: 10px; left: 10px; width: 34px; height: 34px; font-size: 0.9em; }
     .container { grid-template-columns: 1fr; gap: 12px; padding: 10px; }
     #partList { grid-template-columns: repeat(2, 1fr); }
     #participantsPanel { padding: 20px 14px; max-height: 100vh; }
     #participantsPanel h2 { font-size: 1.3em; }
     #rankingPanel { width: 100%; max-width: 100%; padding: 20px 16px; right: -100%; }
     #rankingPanel h2 { font-size: 1.2em; padding-right: 44px; }
+    #statsPanel { width: 100%; max-width: 100%; padding: 20px 16px; left: -100%; }
+    #statsPanel h2 { font-size: 1.2em; padding-right: 44px; }
+    .stat-cards { gap: 8px; }
     .ranking-item { padding: 10px 12px; font-size: 0.9em; }
     .ranking-title { font-size: 0.78em; }
     .podium div { min-width: 55px; padding: 6px; font-size: 0.82em; }
@@ -472,6 +664,8 @@ footer::before {
     .backup-btn { padding: 8px 14px; font-size: 0.82em; margin: 4px; }
     footer { padding: 20px 12px; }
     .footer-title { font-size: 16px; }
+    #toastContainer { bottom: 64px; }
+    .toast { padding: 10px 14px; font-size: 0.88em; }
 }
 
 /* ── Très petit (≤ 380px) ── */
@@ -481,4 +675,5 @@ footer::before {
     #partList { grid-template-columns: repeat(2, 1fr); }
     #participantsToggle { right: 110px; font-size: 0.72em; padding: 7px 10px; }
     #rankingToggle { font-size: 0.72em; padding: 7px 10px; }
+    #statsToggle { font-size: 0.72em; padding: 7px 10px; }
 }
