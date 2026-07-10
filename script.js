@@ -794,41 +794,6 @@ if(!IS_DEV){
 }
 
 // ============================================================
-// 🖱 CURSEUR CUSTOM + TRAÎNÉE D'ÉTOILES
-// ============================================================
-const cursorEl = document.getElementById('cursor');
-cursorEl.textContent = '⭐';
-let lastTrail = 0;
-
-document.addEventListener('mousemove', (e) => {
-    cursorEl.style.left = e.clientX + 'px';
-    cursorEl.style.top  = e.clientY + 'px';
-    if(!REDUCED_MOTION && performance.now() - lastTrail > 70){
-        lastTrail = performance.now();
-        const t = document.createElement('span');
-        t.className = 'cursor-trail'; t.textContent = '✦';
-        t.style.left = e.clientX + 'px'; t.style.top = e.clientY + 'px';
-        document.body.appendChild(t);
-        setTimeout(()=>t.remove(), 700);
-    }
-});
-
-document.addEventListener('mouseover', (e) => {
-    const interactable = e.target.closest('button, a, input, textarea, [onclick], .name, .part-del, .ctrl-btn, .part-name');
-    if (interactable) {
-        cursorEl.classList.add('hovered');
-        cursorEl.textContent = '🌟';
-    }
-});
-document.addEventListener('mouseout', (e) => {
-    const interactable = e.target.closest('button, a, input, textarea, [onclick], .name, .part-del, .ctrl-btn, .part-name');
-    if (interactable) {
-        cursorEl.classList.remove('hovered');
-        cursorEl.textContent = '⭐';
-    }
-});
-
-// ============================================================
 // 🌌 FOND ÉTOILÉ ANIMÉ
 // ============================================================
 const bgCanvas = document.getElementById('bgCanvas');

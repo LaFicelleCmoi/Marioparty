@@ -9,55 +9,15 @@
 }
 
 /* ============================================================
-   CURSEUR MARIO PARTY
+   CURSEURS (système, avec pointer sur tout l'interactif)
    ============================================================ */
-@media (pointer: fine) {
-    *, *::before, *::after { cursor: none !important; }
+button, [onclick], label,
+.name, .part-name, .part-del, .ctrl-btn, .toast-action,
+#rankingToggle, #participantsToggle, #statsToggle, #soundToggle {
+    cursor: pointer;
 }
-@media (pointer: coarse) {
-    #cursor { display: none; }
-}
-
-#cursor {
-    position: fixed;
-    left: -200px;
-    top: -200px;
-    width: 28px;
-    height: 28px;
-    pointer-events: none;
-    z-index: 99999;
-    transform: translate(-50%, -50%);
-    transition: transform 0.15s ease, filter 0.2s ease;
-    font-size: 22px;
-    line-height: 1;
-    text-align: center;
-    user-select: none;
-    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8))
-            drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
-    animation: cursorSpin 6s linear infinite;
-}
-#cursor.hovered {
-    transform: translate(-50%, -50%) scale(1.5);
-    filter: drop-shadow(0 0 6px rgba(0, 198, 255, 0.9))
-            drop-shadow(0 0 14px rgba(0, 198, 255, 0.5));
-    animation: cursorSpinFast 0.6s linear infinite;
-}
-@keyframes cursorSpin     { 0% { rotate: 0deg; } 100% { rotate: 360deg; } }
-@keyframes cursorSpinFast { 0% { rotate: 0deg; } 100% { rotate: 360deg; } }
-
-.cursor-trail {
-    position: fixed;
-    z-index: 99998;
-    pointer-events: none;
-    color: #ffd700;
-    font-size: 11px;
-    transform: translate(-50%, -50%);
-    animation: trailFade 0.7s ease-out forwards;
-}
-@keyframes trailFade {
-    0%   { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
-    100% { opacity: 0;   transform: translate(-50%, 30%) scale(0.3) rotate(120deg); }
-}
+button:disabled, .add-btn:disabled { cursor: not-allowed; }
+input[type="text"], textarea { cursor: text; }
 
 /* ============================================================
    CANVAS (fond étoilé + confettis)
