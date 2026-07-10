@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mario Party 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="icon.png">
+</head>
+<body>
+
+<div id="cursor">⭐</div>
+
+<div id="securityBreach">
+    <h1>🚫 ACCÈS INTERDIT</h1>
+    <p>La console développeur est détectée.</p>
+    <p>Veuillez fermer l'inspecteur pour continuer.</p>
+</div>
+
+<div id="header">
+    <img id="logoImg" src="icon.png" alt="Logo">
+    <h1> Mario Party 2026</h1>
+</div>
+
+<div id="participantsToggle" onclick="toggleParticipants()">👥 Participants</div>
+<div id="rankingToggle" onclick="toggleRanking()">📋 Classement</div>
+
+<div id="typewriter-container">
+    <span id="typewriter-text"></span><span id="typewriter-cursor"></span>
+</div>
+
+<div class="container" id="container"></div>
+
+<div class="bottom">
+    <div class="counter" id="counter"></div>
+    <div class="podium" id="podium"></div>
+</div>
+
+<div class="backup-section">
+    <h3>Sécurité & Sauvegarde</h3>
+    <button class="backup-btn" onclick="exportData()">💾 Sauvegarder (JSON)</button>
+    <button class="backup-btn" onclick="document.getElementById('fileInput').click()">📂 Restaurer</button>
+    <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importData(this)">
+    <p style="font-size:0.8em; opacity:0.6; margin-top:10px;">Données chiffrées (AES)</p>
+</div>
+
+<div id="rankingOverlay" onclick="closeAll()"></div>
+
+<!-- Panel Classement -->
+<div id="rankingPanel">
+    <button class="close-btn" onclick="closeAll()">✖</button>
+    <h2>📋 Classement Général</h2>
+    <div id="fullRanking"></div>
+</div>
+
+<!-- Panel Participants -->
+<div id="participantsPanel">
+    <button class="panel-close" onclick="closeAll()">✖</button>
+    <h2>👥 Participants</h2>
+    <div class="part-subtitle">Joueurs enregistrés</div>
+    <div class="part-add-row">
+        <input type="text" id="partInput" placeholder="Nom du joueur..."
+               onkeydown="if(event.key==='Enter') addParticipant()">
+        <button onclick="addParticipant()">＋</button>
+    </div>
+    <div class="part-count" id="partCount"></div>
+    <div id="partList"></div>
+</div>
+
+<!-- Modal -->
+<div id="customModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 id="modalTitle">Titre</h3>
+        <p id="modalMessage" style="display:none"></p>
+        <input type="text" id="modalInput" class="modal-input" placeholder="Entrez un nom...">
+        <div class="modal-buttons">
+            <button class="modal-btn cancel" onclick="closeModal()">Annuler</button>
+            <button class="modal-btn confirm" id="modalConfirmBtn">Valider</button>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <div class="footer-container">
+        <div class="footer-brand">
+            <span class="footer-logo">🎮</span>
+            <span class="footer-title">Mario Party</span>
+        </div>
+        <div class="footer-divider"></div>
+        <p class="footer-copy">© 2026 Mario Party — Créé par <span class="footer-author">Ficellecmoi</span></p>
+    </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
