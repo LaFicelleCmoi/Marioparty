@@ -361,10 +361,10 @@ function playerSparkline(monthly){
     const poly = coords.map(c=>c[0].toFixed(1)+','+c[1].toFixed(1)).join(' ');
     const area = `${pad},${h-pad} ${poly} ${w-pad},${h-pad}`;
     const dots = coords.map((c,i)=> monthly[i]
-        ? `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3.2" fill="#ffd700"/>` : '').join('');
+        ? `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3.5" fill="#fbd000" stroke="#1a1a2e" stroke-width="1.2"/>` : '').join('');
     return `<svg viewBox="0 0 ${w} ${h}" class="sparkline" preserveAspectRatio="none">
-        <polygon points="${area}" fill="rgba(0,198,255,0.12)"/>
-        <polyline points="${poly}" fill="none" stroke="#00c6ff" stroke-width="2.5"
+        <polygon points="${area}" fill="rgba(4,156,216,0.15)"/>
+        <polyline points="${poly}" fill="none" stroke="#049cd8" stroke-width="3"
                   stroke-linejoin="round" stroke-linecap="round"/>
         ${dots}
     </svg>`;
@@ -877,12 +877,14 @@ const bgCanvas = document.getElementById('bgCanvas');
 const bctx = bgCanvas.getContext('2d');
 let stars = [], shoot = null, shootTimer = 300;
 
+const BG_COLORS = ['#e52521','#049cd8','#fbd000','#43b047'];
 function makeStars(){
-    const n = Math.min(160, (innerWidth*innerHeight/9000)|0);
+    const n = Math.min(90, (innerWidth*innerHeight/16000)|0);
     stars = Array.from({length:n}, ()=>({
         x: Math.random()*bgCanvas.width, y: Math.random()*bgCanvas.height,
         z: 0.3+Math.random()*0.7,
-        tw: Math.random()*Math.PI*2, ts: 0.01+Math.random()*0.03
+        c: BG_COLORS[(Math.random()*BG_COLORS.length)|0],
+        tw: Math.random()*Math.PI*2, ts: 0.008+Math.random()*0.02
     }));
 }
 function bgResize(){ bgCanvas.width = innerWidth; bgCanvas.height = innerHeight; makeStars(); }
@@ -897,9 +899,9 @@ function drawStars(animate){
             if(s.y > bgCanvas.height){ s.y = 0; s.x = Math.random()*bgCanvas.width; }
             if(s.x > bgCanvas.width) s.x = 0;
         }
-        bctx.globalAlpha = animate ? 0.25 + Math.abs(Math.sin(s.tw))*0.6 : 0.5;
-        bctx.fillStyle = '#fff';
-        bctx.beginPath(); bctx.arc(s.x, s.y, s.z*1.4, 0, 7); bctx.fill();
+        bctx.globalAlpha = animate ? 0.10 + Math.abs(Math.sin(s.tw))*0.14 : 0.15;
+        bctx.fillStyle = s.c;
+        bctx.beginPath(); bctx.arc(s.x, s.y, s.z*2.4, 0, 7); bctx.fill();
     });
     bctx.globalAlpha = 1;
 }
@@ -914,7 +916,7 @@ function bgLoop(){
         shoot.x += shoot.vx; shoot.y += shoot.vy; shoot.life--;
         bctx.globalAlpha = Math.min(1, shoot.life/20);
         const grad = bctx.createLinearGradient(shoot.x, shoot.y, shoot.x-shoot.vx*6, shoot.y-shoot.vy*6);
-        grad.addColorStop(0,'#ffffff'); grad.addColorStop(1,'rgba(255,255,255,0)');
+        grad.addColorStop(0,'#fbd000'); grad.addColorStop(1,'rgba(251,208,0,0)');
         bctx.strokeStyle = grad; bctx.lineWidth = 2;
         bctx.beginPath();
         bctx.moveTo(shoot.x, shoot.y);
