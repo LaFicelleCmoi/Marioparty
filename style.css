@@ -439,6 +439,22 @@ li:hover { background: var(--card-bg2); border-color: var(--sea); transform: tra
     font-size: 1.1em; font-weight: 700; margin-bottom: 20px; text-align: center;
 }
 .modal-input:focus { outline: 3px solid var(--m-blue); outline-offset: 1px; }
+#modalSuggest {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    margin: -6px 0 18px;
+}
+#modalSuggest:empty { margin: 0; }
+.suggest-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--bg); color: var(--text);
+    border: 2px solid var(--ink); border-radius: 999px;
+    padding: 4px 12px 4px 5px; font-weight: 800; font-size: 0.85em;
+    box-shadow: 2px 2px 0 var(--shadow-c);
+    transition: transform 0.12s, box-shadow 0.12s, background 0.15s;
+}
+.suggest-chip:hover  { background: var(--card-bg2); transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--shadow-c); }
+.suggest-chip:active { transform: translate(1px,1px); box-shadow: 0 0 0 var(--shadow-c); }
+.suggest-chip .avatar { width: 22px; height: 22px; font-size: 0.7em; }
 .modal-buttons { display: flex; justify-content: center; gap: 12px; }
 .modal-btn {
     padding: 8px 22px; border-radius: 999px;

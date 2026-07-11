@@ -18,9 +18,51 @@ function nameHue(name){
     return h % 360;
 }
 function avatarHtml(name, cls=''){
-    const hue = nameHue(name);
+    const hue = nameHue(normName(name) || name);
     const ini = escapeHtml(name.trim().charAt(0).toUpperCase() || '?');
     return `<span class="avatar ${cls}" style="background:linear-gradient(135deg,hsl(${hue},72%,55%),hsl(${(hue+45)%360},72%,38%))">${ini}</span>`;
+}
+
+// ============================================================
+// 🔗 COMPTABILITÉ DES NOMS
+// Peu importe l'écriture (casse, accents, petite faute de
+// frappe), tout est rattaché au même joueur.
+// ============================================================
+function normName(s){
+    return String(s).replace('#','').trim().toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g,'')   // retire les accents
+        .replace(/\s+/g,' ');
+}
+function levenshtein(a, b){
+    if(a === b) return 0;
+    const m = a.length, n = b.length;
+    if(!m) return n; if(!n) return m;
+    let prev = Array.from({length:n+1}, (_,i)=>i);
+    for(let i=1;i<=m;i++){
+        const cur = [i];
+        for(let j=1;j<=n;j++){
+            cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a[i-1]===b[j-1] ? 0 : 1));
+        }
+        prev = cur;
+    }
+    return prev[n];
+}
+// Même joueur ? Exact après normalisation, ou 1-2 lettres d'écart
+// (jamais de fuzzy sur les noms très courts pour ne pas confondre Tom/Tam)
+function sameNorm(a, b){
+    const na = normName(a), nb = normName(b);
+    if(na === nb) return true;
+    const len = Math.min(na.length, nb.length);
+    if(len < 4) return false;
+    const tol = len >= 7 ? 2 : 1;
+    return levenshtein(na, nb) <= tol;
+}
+// Nom officiel du joueur correspondant (sinon le nom saisi tel quel)
+function canonicalName(input){
+    const exact = participants.find(p => normName(p.name) === normName(input));
+    if(exact) return exact.name;
+    const fuzzy = participants.find(p => sameNorm(p.name, input));
+    return fuzzy ? fuzzy.name : String(input).trim();
 }
 
 function encrypt(obj){ return CryptoJS.AES.encrypt(JSON.stringify(obj), SECRET_KEY).toString(); }
@@ -82,15 +124,39 @@ if(rawParts){
 }
 
 ;(function(){
+    // 1) Fusionne les participants en double (casse / accents / typo)
+    const kept = [];
+    participants.forEach(p=>{
+        const twin = kept.find(k => sameNorm(k.name, p.name));
+        if(twin){ twin.extraGames = (twin.extraGames||0) + (p.extraGames||0); }
+        else kept.push(p);
+    });
+    participants = kept;
+
+    // 2) Crée les participants manquants depuis les données
     Object.values(data).forEach(month=>{
-        month.forEach(name=>{
-            const clean = name.replace('#','').trim();
-            if(clean && !participants.find(p => p.name.toLowerCase() === clean.toLowerCase())){
+        month.forEach(raw=>{
+            const clean = raw.replace('#','').trim();
+            if(clean && !participants.find(p => sameNorm(p.name, clean))){
                 participants.push({ name: clean, extraGames: 0 });
             }
         });
     });
+
+    // 3) Réécrit chaque entrée avec le nom officiel du joueur
+    let changed = false;
+    Object.keys(data).forEach(m=>{
+        data[m] = data[m].map(raw=>{
+            const passed = raw.includes('#');
+            const canon = canonicalName(raw.replace('#','').trim());
+            const out = canon + (passed ? '#' : '');
+            if(out !== raw) changed = true;
+            return out;
+        });
+    });
+
     saveParts();
+    if(changed) saveData();
 })();
 
 function saveData(){ localStorage.setItem("marioParty2026", encrypt(data)); }
@@ -247,7 +313,7 @@ function addParticipant(){
     const input = document.getElementById('partInput');
     const val = input.value.trim();
     if(!val) return;
-    if(participants.find(p => p.name.toLowerCase() === val.toLowerCase())){
+    if(participants.find(p => sameNorm(p.name, val))){
         input.value = ''; return;
     }
     participants.push({ name: val, extraGames: 0 });
@@ -262,9 +328,9 @@ function removeParticipant(name){
         participants = participants.filter(p => p.name !== name);
         // Retire aussi ses entrées des mois, sinon il reste au classement
         // et serait recréé automatiquement au prochain chargement.
-        const norm = name.toLowerCase();
+        const norm = normName(name);
         Object.keys(data).forEach(month=>{
-            data[month] = data[month].filter(n => n.replace('#','').trim().toLowerCase() !== norm);
+            data[month] = data[month].filter(n => normName(n) !== norm);
         });
         saveParts(); saveData();
         renderParticipants(); render();
@@ -282,17 +348,17 @@ function changeGames(name, delta){
 }
 
 function getParticipantStats(name){
-    const norm = name.toLowerCase();
+    const norm = normName(name);
     let wins = 0, gamesInData = 0;
     Object.values(data).forEach(month=>{
         month.forEach(n=>{
-            if(n.replace('#','').trim().toLowerCase() === norm){
+            if(normName(n) === norm){
                 gamesInData++;
                 if(!n.includes('#')) wins++;
             }
         });
     });
-    const p = participants.find(p => p.name.toLowerCase() === norm);
+    const p = participants.find(p => normName(p.name) === norm);
     const extraGames = p ? (p.extraGames || 0) : 0;
     return { wins, participations: gamesInData + extraGames };
 }
@@ -372,13 +438,13 @@ function playerSparkline(monthly){
 
 function openPlayerCard(name){
     const stats = getParticipantStats(name);
-    const norm = name.toLowerCase();
+    const norm = normName(name);
     const monthly = monthOrder.map(m =>
-        data[m].filter(n => !n.includes('#') && n.trim().toLowerCase() === norm).length
+        data[m].filter(n => !n.includes('#') && normName(n) === norm).length
     );
     const winrate = stats.participations ? Math.round(stats.wins / stats.participations * 100) : 0;
     const ranking = computeRanking();
-    const rankIdx = ranking.findIndex(e => e[0] === norm);
+    const rankIdx = ranking.findIndex(e => normName(e[0]) === norm);
     const rankTxt = rankIdx >= 0 ? '#' + (rankIdx + 1) : '—';
     const maxMonthly = Math.max(1, ...monthly);
 
@@ -427,7 +493,28 @@ function openModal(action, title, initialValue="", extraData=null){
         input.style.display = 'block'; msg.style.display = 'none';
         input.value = initialValue; setTimeout(()=>input.focus(), 100);
     }
+    renderSuggest(input.value);
     modal.classList.add("open");
+}
+
+// Suggestions de joueurs existants dans la modale (un clic = validé)
+function renderSuggest(filter=''){
+    const box = document.getElementById('modalSuggest');
+    if(!currentAction || (currentAction.type !== 'add' && currentAction.type !== 'edit')){
+        box.innerHTML = ''; return;
+    }
+    const f = normName(filter);
+    const list = participants
+        .filter(p => !f || normName(p.name).includes(f))
+        .slice(0, 8);
+    box.innerHTML = list.map(p=>{
+        const safeAttr = escapeHtml(p.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
+        return `<button type="button" class="suggest-chip" onclick="pickSuggest('${safeAttr}')">${avatarHtml(p.name)}<span>${escapeHtml(p.name)}</span></button>`;
+    }).join('');
+}
+function pickSuggest(name){
+    document.getElementById('modalInput').value = name;
+    document.getElementById('modalConfirmBtn').click();
 }
 function closeModal(){ document.getElementById("customModal").classList.remove("open"); currentAction = null; }
 
@@ -436,23 +523,35 @@ document.getElementById("modalConfirmBtn").onclick = () => {
     const inputVal = document.getElementById("modalInput").value.trim();
     if(currentAction.type === 'add' && inputVal){
         const month = currentAction.month;
-        data[month].push(inputVal);
-        if(!participants.find(p => p.name.toLowerCase() === inputVal.toLowerCase())){
-            participants.push({ name: inputVal, extraGames: 0 });
+        const canon = canonicalName(inputVal);   // « occxlt » → « Occult »
+        data[month].push(canon);
+        if(!participants.find(p => sameNorm(p.name, canon))){
+            participants.push({ name: canon, extraGames: 0 });
             saveParts();
         }
         saveData(); render();
         Sound.coin();
         confettiBurst(innerWidth/2, innerHeight*0.35);
+        if(normName(canon) !== normName(inputVal)){
+            showToast('Compté pour ' + canon, { icon:'🔗' });
+        }
         if(data[month].length >= maxWins[month]){
             Sound.fanfare();
             showToast(month + ' est complet ! 🏁', { icon:'🎉' });
         }
     } else if(currentAction.type === 'edit' && inputVal){
+        const canon = canonicalName(inputVal);
         const oldName = data[currentAction.month][currentAction.index];
-        data[currentAction.month][currentAction.index] = inputVal + (oldName.includes("#") ? "#" : "");
+        data[currentAction.month][currentAction.index] = canon + (oldName.includes("#") ? "#" : "");
+        if(!participants.find(p => sameNorm(p.name, canon))){
+            participants.push({ name: canon, extraGames: 0 });
+            saveParts();
+        }
         saveData(); render();
         Sound.click();
+        if(normName(canon) !== normName(inputVal)){
+            showToast('Compté pour ' + canon, { icon:'🔗' });
+        }
     } else if(currentAction.type === 'confirm_import'){
         data = currentAction.newData; saveData();
         if(currentAction.newParticipants !== null && currentAction.newParticipants !== undefined){
@@ -466,6 +565,9 @@ document.getElementById("modalConfirmBtn").onclick = () => {
 };
 document.getElementById("modalInput").addEventListener("keypress", e=>{
     if(e.key === "Enter") document.getElementById("modalConfirmBtn").click();
+});
+document.getElementById("modalInput").addEventListener("input", e=>{
+    renderSuggest(e.target.value);
 });
 
 // ============================================================
@@ -511,23 +613,23 @@ function computeRanking(){
     Object.values(data).forEach(month=>{
         month.forEach(name=>{
             if(!name.includes("#")){
-                const clean = name.trim(), norm = clean.toLowerCase();
+                const clean = name.trim(), norm = normName(clean);
                 if(!counts[norm]){ counts[norm]=0; displayNames[norm]=clean; }
                 counts[norm]++;
             }
         });
     });
-    return Object.entries(counts).sort((a,b)=>{
-        if(b[1]!==a[1]) return b[1]-a[1];
-        return displayNames[a[0]].localeCompare(displayNames[b[0]]);
-    });
+    // renvoie [nomAffiché, victoires] — le regroupement se fait sur le nom normalisé
+    return Object.entries(counts)
+        .map(([norm, c]) => [displayNames[norm], c])
+        .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]));
 }
 
 function getChronology(){
     const seq = [];
     monthOrder.forEach(m => data[m].forEach(raw=>{
         const clean = raw.replace('#','').trim();
-        seq.push({ month: m, name: clean, norm: clean.toLowerCase(), win: !raw.includes('#') });
+        seq.push({ month: m, name: clean, norm: normName(clean), win: !raw.includes('#') });
     }));
     return seq;
 }
@@ -584,7 +686,7 @@ function render(){
 
         const monthWins = {};
         data[month].forEach(n=>{
-            const k = n.replace("#","").trim().toLowerCase();
+            const k = normName(n);
             if(!n.includes("#")) monthWins[k] = (monthWins[k]||0)+1;
         });
 
@@ -596,18 +698,18 @@ function render(){
             if(isPassed) span.classList.add("passed");
 
             const cleanName = name.replace("#","").trim();
-            const normName  = cleanName.toLowerCase();
+            const nName     = normName(cleanName);
 
             let badges = "";
             if(!isPassed){
-                if(normName === prevNorm) runLen++; else { prevNorm = normName; runLen = 1; }
-                if(!seenWinners.has(normName)){
+                if(nName === prevNorm) runLen++; else { prevNorm = nName; runLen = 1; }
+                if(!seenWinners.has(nName)){
                     badges += `<span class="badge" title="Première victoire de l'année">✨</span>`;
-                    seenWinners.add(normName);
+                    seenWinners.add(nName);
                 }
                 if(runLen >= 2) badges += `<span class="badge" title="En feu ! ${runLen} victoires d'affilée">🔥</span>`;
                 if(runLen >= 3) badges += `<span class="badge" title="Série de ${runLen} !">⚡</span>`;
-                if(monthWins[normName] >= 3) badges += `<span class="badge" title="Roi du mois">👑</span>`;
+                if(monthWins[nName] >= 3) badges += `<span class="badge" title="Roi du mois">👑</span>`;
             }
 
             span.innerHTML = avatarHtml(cleanName) + '<span class="name-txt">' + escapeHtml(cleanName) + '</span>' + badges;
