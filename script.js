@@ -899,7 +899,7 @@ function drawStars(animate){
             if(s.y > bgCanvas.height){ s.y = 0; s.x = Math.random()*bgCanvas.width; }
             if(s.x > bgCanvas.width) s.x = 0;
         }
-        bctx.globalAlpha = animate ? 0.10 + Math.abs(Math.sin(s.tw))*0.14 : 0.15;
+        bctx.globalAlpha = animate ? 0.16 + Math.abs(Math.sin(s.tw))*0.22 : 0.25;
         bctx.fillStyle = s.c;
         bctx.beginPath(); bctx.arc(s.x, s.y, s.z*2.4, 0, 7); bctx.fill();
     });
