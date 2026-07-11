@@ -131,12 +131,14 @@ h1 {
 }
 #typewriter-cursor {
     display: inline-block;
-    width: 2px;
-    height: 1.1em;
-    background: #00c6ff;
-    margin-left: 2px;
+    width: 0.45em;
+    height: 1.3em;
+    background: linear-gradient(180deg, #FFE600, #FF9500);
+    border-radius: 3px;
+    margin-left: 4px;
     vertical-align: middle;
-    animation: blink 0.7s infinite;
+    box-shadow: 0 0 8px rgba(255,230,0,0.7);
+    animation: blink 0.7s steps(2, start) infinite;
 }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
@@ -151,6 +153,7 @@ h1 {
         -1px 1px 0px #FF4500;
     letter-spacing: 1.5px;
     display: inline-block;
+    filter: drop-shadow(0 0 10px rgba(255,230,0,0.35));
     animation: cartoonBounce 0.4s ease-in-out infinite alternate;
 }
 @keyframes cartoonBounce {

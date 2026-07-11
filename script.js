@@ -762,7 +762,7 @@ function renderStats(){
 // ============================================================
 // ⌨️ TYPEWRITER
 // ============================================================
-const twTexts = [
+const twStatic = [
     "🎮 Qui sera le champion de 2026 ?",
     "🏆 Chaque partie compte !",
     "🎲 Que le meilleur gagne !",
@@ -771,23 +771,65 @@ const twTexts = [
     "🐢 Gare aux carapaces bleues !",
     "🔥 Qui enchaînera les victoires ?",
     "👑 Le trône n'attend personne !",
+    "🎯 La régularité paie toujours…",
+    "💫 Une étoile peut tout changer !",
+    "🎉 Pas de pitié, même entre amis !",
 ];
-let twIndex = 0, twChar = 0, twDeleting = false;
-const twSpeed = 80;
-const twEl = document.getElementById("typewriter-text");
 
-function typeEffect() {
-    const current = twTexts[twIndex];
-    if (!twDeleting) {
-        twEl.textContent = current.substring(0, twChar + 1);
-        twChar++;
-        if (twChar === current.length) { setTimeout(() => twDeleting = true, 1800); }
-    } else {
-        twEl.textContent = current.substring(0, twChar - 1);
-        twChar--;
-        if (twChar === 0) { twDeleting = false; twIndex = (twIndex + 1) % twTexts.length; }
+// Phrases générées depuis les données réelles du championnat
+function twDynamic(){
+    const msgs = [];
+    const ranking = computeRanking();
+    if(ranking.length){
+        const [lead, wins] = ranking[0];
+        msgs.push(`👑 ${cap(lead)} domine avec ${wins} victoire${wins>1?'s':''} !`);
+        if(ranking.length > 1){
+            if(ranking[1][1] === wins){
+                msgs.push(`⚔️ Égalité au sommet : ${cap(lead)} contre ${cap(ranking[1][0])} !`);
+            } else if(wins - ranking[1][1] === 1){
+                msgs.push(`😱 ${cap(ranking[1][0])} n'est qu'à une victoire de ${cap(lead)} !`);
+            }
+        }
     }
-    setTimeout(typeEffect, twDeleting ? twSpeed / 2 : twSpeed);
+    const { current, best } = computeStreaks();
+    if(current.len >= 2) msgs.push(`🔥 ${cap(current.name)} enchaîne ${current.len} victoires !`);
+    if(best.len >= 3)    msgs.push(`⚡ Record de l'année : ${best.len} d'affilée pour ${cap(best.name)} !`);
+
+    const played = monthOrder.reduce((s,m)=>s+data[m].length,0);
+    const left = TOTAL_GAMES - played;
+    if(played === 0)   msgs.push("🚦 La saison 2026 va commencer !");
+    else if(left > 0)  msgs.push(`⏳ Encore ${left} partie${left>1?'s':''} avant le verdict final…`);
+    else               msgs.push("🏁 Saison terminée ! Bravo au champion !");
+    return msgs;
+}
+
+const twEl = document.getElementById("typewriter-text");
+let twLast = "", twChars = [], twChar = 0, twDeleting = false;
+
+function twPick(){
+    const pool = twStatic.concat(twDynamic());
+    let t;
+    do { t = pool[(Math.random()*pool.length)|0]; } while(pool.length > 1 && t === twLast);
+    twLast = t;
+    return Array.from(t); // découpe par points de code : les emojis restent entiers
+}
+
+function typeEffect(){
+    if(!twChars.length) twChars = twPick();
+    let delay;
+    if(!twDeleting){
+        twChar++;
+        twEl.textContent = twChars.slice(0, twChar).join('');
+        delay = 55 + Math.random()*70;                       // frappe humaine, vitesse variable
+        if(",;:!?…".includes(twChars[twChar-1])) delay += 220; // pause sur la ponctuation
+        if(twChar >= twChars.length){ twDeleting = true; delay = 2300; }
+    } else {
+        twChar--;
+        twEl.textContent = twChars.slice(0, twChar).join('');
+        delay = 26;
+        if(twChar <= 0){ twDeleting = false; twChars = twPick(); delay = 550; }
+    }
+    setTimeout(typeEffect, delay);
 }
 
 // ============================================================
