@@ -43,6 +43,11 @@ const MONTH_EMOJI = {
     "Mai":"🌼","Juin":"☀️","Juillet":"🏖️","Août":"🌴",
     "Septembre":"🍂","Octobre":"🎃","Novembre":"🌧️","Décembre":"🎄"
 };
+const MONTH_SEASON = {
+    "Janvier":"winter","Février":"winter","Mars":"spring","Avril":"spring",
+    "Mai":"spring","Juin":"summer","Juillet":"summer","Août":"summer",
+    "Septembre":"autumn","Octobre":"autumn","Novembre":"autumn","Décembre":"winter"
+};
 const TOTAL_GAMES = Object.values(maxWins).reduce((a,b)=>a+b,0);
 const defaultData = {
     "Janvier":[],"Février":[],"Mars":[],"Avril":[],"Mai":[],"Juin":[],
@@ -548,7 +553,8 @@ function updateYearProgress(){
     const pct = Math.min(100, played/TOTAL_GAMES*100);
     document.getElementById('ypFill').style.width = pct + '%';
     document.getElementById('ypLabel').textContent =
-        `🎲 ${played} / ${TOTAL_GAMES} parties jouées — ${Math.round(pct)}%`;
+        `${played} / ${TOTAL_GAMES} parties — ${Math.round(pct)}%`;
+    document.getElementById('chipPlayed').textContent = played;
 }
 
 function render(){
@@ -557,7 +563,8 @@ function render(){
     const seenWinners = new Set();
 
     monthOrder.forEach((month, mi)=>{
-        const div = document.createElement("div"); div.className = "month";
+        const div = document.createElement("div");
+        div.className = "month season-" + MONTH_SEASON[month];
         if(firstRender && !REDUCED_MOTION){
             div.classList.add("animate-in");
             div.style.animationDelay = (mi*45)+"ms";
@@ -648,19 +655,21 @@ function render(){
 }
 
 function updateRanking(){
-    const cDiv = document.getElementById("counter");
     const pDiv = document.getElementById("podium");
     const fDiv = document.getElementById("fullRanking");
+    const chipLeader = document.getElementById("chipLeader");
+    const chipStreak = document.getElementById("chipStreak");
     const sorted = computeRanking();
+    const { current } = computeStreaks();
+
+    chipStreak.textContent = current.len > 1 ? cap(current.name) + ' ×' + current.len : '—';
 
     pDiv.innerHTML = ""; fDiv.innerHTML = "";
-    if(!sorted.length){ cDiv.innerHTML = "Aucun vainqueur"; return; }
+    if(!sorted.length){ chipLeader.textContent = "—"; return; }
 
     const maxS = sorted[0][1];
     const leaderList = sorted.filter(p=>p[1]===maxS).map(p=>cap(p[0]));
-    const leaders = leaderList.map(escapeHtml).join(", ");
-    const leaderLabel = leaderList.length > 1 ? "Grands vainqueurs actuels" : "Grand vainqueur actuel";
-    cDiv.innerHTML = "👑 "+leaderLabel+" : <b>"+leaders+"</b> ("+maxS+") victoire(s)";
+    chipLeader.textContent = leaderList.join(", ") + " · " + maxS;
 
     [{rank:1,cls:"second",e:"🥈"},{rank:0,cls:"first",e:"🥇"},{rank:2,cls:"third",e:"🥉"}].forEach(s=>{
         if(sorted[s.rank]){

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0f2027">
+<meta name="theme-color" content="#0a1420">
 <meta name="description" content="Suivi du championnat Mario Party 2026 — classement, statistiques et podium.">
 <title>Mario Party 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -12,6 +12,7 @@
 </head>
 <body>
 
+<div id="aurora"></div>
 <canvas id="bgCanvas"></canvas>
 <canvas id="fxCanvas"></canvas>
 
@@ -21,47 +22,61 @@
     <p>Veuillez fermer l'inspecteur pour continuer.</p>
 </div>
 
-<button id="soundToggle" onclick="toggleSound()" title="Activer / couper les sons">🔊</button>
+<!-- ═══════════ NAVBAR ═══════════ -->
+<nav id="topbar">
+    <div class="brand">
+        <img src="icon.png" alt="Logo Mario Party">
+        <span class="brand-name">Mario Party <b>2026</b></span>
+    </div>
+    <div class="topbar-actions">
+        <button class="nav-btn" onclick="toggleStats()">📊 <span>Stats</span></button>
+        <button class="nav-btn" onclick="toggleParticipants()">👥 <span>Participants</span></button>
+        <button class="nav-btn gold" onclick="toggleRanking()">🏆 <span>Classement</span></button>
+        <button id="soundToggle" onclick="toggleSound()" title="Activer / couper les sons">🔊</button>
+    </div>
+</nav>
 
-<div id="header">
-    <img id="logoImg" src="icon.png" alt="Logo">
-    <h1> Mario Party 2026</h1>
-</div>
+<!-- ═══════════ HERO ═══════════ -->
+<header id="hero">
+    <h1>Mario Party 2026</h1>
+    <div id="typewriter-container">
+        <span id="typewriter-text"></span><span id="typewriter-cursor"></span>
+    </div>
 
-<div id="statsToggle" onclick="toggleStats()">📊 Stats</div>
-<div id="participantsToggle" onclick="toggleParticipants()">👥 Participants</div>
-<div id="rankingToggle" onclick="toggleRanking()">📋 Classement</div>
+    <div class="hero-chips">
+        <div class="chip"><span class="chip-ic">👑</span><div><b id="chipLeader">—</b><small>En tête</small></div></div>
+        <div class="chip"><span class="chip-ic">🔥</span><div><b id="chipStreak">—</b><small>Série en cours</small></div></div>
+        <div class="chip"><span class="chip-ic">🎲</span><div><b id="chipPlayed">0</b><small>Parties jouées</small></div></div>
+    </div>
 
-<div id="typewriter-container">
-    <span id="typewriter-text"></span><span id="typewriter-cursor"></span>
-</div>
+    <div id="yearProgress">
+        <div class="yp-label" id="ypLabel"></div>
+        <div class="yp-track"><div class="yp-fill" id="ypFill"></div></div>
+    </div>
 
-<div id="yearProgress">
-    <div class="yp-label" id="ypLabel"></div>
-    <div class="yp-track"><div class="yp-fill" id="ypFill"></div></div>
-</div>
-
-<div class="container" id="container"></div>
-
-<div class="bottom">
-    <div class="counter" id="counter"></div>
     <div class="podium" id="podium"></div>
-</div>
+</header>
 
-<div class="backup-section">
-    <h3>Sécurité & Sauvegarde</h3>
-    <button class="backup-btn" onclick="exportData()">💾 Sauvegarder (JSON)</button>
-    <button class="backup-btn" onclick="document.getElementById('fileInput').click()">📂 Restaurer</button>
+<!-- ═══════════ SAISON ═══════════ -->
+<section class="container" id="container"></section>
+
+<!-- ═══════════ SAUVEGARDE ═══════════ -->
+<section class="backup-section">
+    <h3>💾 Sécurité & Sauvegarde</h3>
+    <div class="backup-actions">
+        <button class="backup-btn" onclick="exportData()">💾 Sauvegarder (JSON)</button>
+        <button class="backup-btn" onclick="document.getElementById('fileInput').click()">📂 Restaurer</button>
+    </div>
     <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importData(this)">
-    <p style="font-size:0.8em; opacity:0.6; margin-top:10px;">Données chiffrées (AES)</p>
-</div>
+    <p class="backup-note">Données chiffrées (AES) — stockées localement</p>
+</section>
 
 <div id="rankingOverlay" onclick="closeAll()"></div>
 
 <!-- Panel Classement -->
 <div id="rankingPanel">
     <button class="close-btn" onclick="closeAll()">✖</button>
-    <h2>📋 Classement Général</h2>
+    <h2>🏆 Classement Général</h2>
     <div id="fullRanking"></div>
 </div>
 
