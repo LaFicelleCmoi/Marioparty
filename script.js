@@ -11,6 +11,18 @@ function escapeHtml(str){
 }
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
+// Avatar à initiale, teinte stable dérivée du nom
+function nameHue(name){
+    let h = 0;
+    for(const c of name.toLowerCase()) h = (h*31 + c.charCodeAt(0)) >>> 0;
+    return h % 360;
+}
+function avatarHtml(name, cls=''){
+    const hue = nameHue(name);
+    const ini = escapeHtml(name.trim().charAt(0).toUpperCase() || '?');
+    return `<span class="avatar ${cls}" style="background:linear-gradient(135deg,hsl(${hue},72%,55%),hsl(${(hue+45)%360},72%,38%))">${ini}</span>`;
+}
+
 function encrypt(obj){ return CryptoJS.AES.encrypt(JSON.stringify(obj), SECRET_KEY).toString(); }
 function decrypt(cipher){
     try { return JSON.parse(CryptoJS.AES.decrypt(cipher, SECRET_KEY).toString(CryptoJS.enc.Utf8)); }
@@ -315,6 +327,7 @@ function renderParticipants(){
                 <button class="part-del" onclick="removeParticipant('${safeAttr}')">✖</button>
             </div>
             <div class="part-item-left">
+                ${avatarHtml(p.name,'av-sm')}
                 <div class="part-name" onclick="openPlayerCard('${safeAttr}')" title="Voir la fiche">${medal}${escapeHtml(p.name)}</div>
                 <div class="part-stats">
                     <span>🏆 ${stats.wins}</span>
@@ -373,6 +386,7 @@ function openPlayerCard(name){
     const box = document.getElementById('playerCardBox');
     box.innerHTML = `
         <button class="close-btn" onclick="closePlayerCard()">✖</button>
+        <div class="pc-avatar-row">${avatarHtml(name,'av-xl')}</div>
         <h3 class="pc-name">${escapeHtml(name)}</h3>
         <div class="pc-chips">
             <div class="pc-chip"><b>${stats.wins}</b><span>Victoires</span></div>
@@ -589,7 +603,7 @@ function render(){
                 if(monthWins[normName] >= 3) badges += `<span class="badge" title="Roi du mois">👑</span>`;
             }
 
-            span.innerHTML = escapeHtml(cleanName) + badges;
+            span.innerHTML = avatarHtml(cleanName) + '<span class="name-txt">' + escapeHtml(cleanName) + '</span>' + badges;
             span.onclick = ()=>{
                 data[month][index] = isPassed ? name.replace("#","") : name+"#";
                 saveData(); render();
@@ -609,6 +623,12 @@ function render(){
             bc.appendChild(eb); bc.appendChild(db);
             li.appendChild(span); li.appendChild(bc); ul.appendChild(li);
         });
+        if(!data[month].length){
+            const empty = document.createElement("li");
+            empty.className = "empty-slot";
+            empty.textContent = "Aucune partie jouée";
+            ul.appendChild(empty);
+        }
         div.appendChild(ul);
 
         const ab = document.createElement("button"); ab.textContent="➕ Ajouter"; ab.className="add-btn";
@@ -646,8 +666,13 @@ function updateRanking(){
         if(sorted[s.rank]){
             const nm = cap(sorted[s.rank][0]);
             const sc = sorted[s.rank][1];
-            const b = document.createElement("div"); b.className = s.cls;
-            b.innerHTML = s.e+"<br><b>"+escapeHtml(nm)+"</b><br>"+sc; pDiv.appendChild(b);
+            const b = document.createElement("div"); b.className = "pod "+s.cls;
+            b.innerHTML =
+                (s.rank===0 ? '<span class="pod-crown">👑</span>' : '')
+                + avatarHtml(nm,'av-md')
+                + '<b class="pod-name">'+escapeHtml(nm)+'</b>'
+                + '<span class="pod-score">'+s.e+' '+sc+'</span>';
+            pDiv.appendChild(b);
         }
     });
 
@@ -666,7 +691,8 @@ function updateRanking(){
         if(vRank===0) item.classList.add("gold");
         else if(vRank===1) item.classList.add("silver");
         else if(vRank===2) item.classList.add("bronze");
-        item.innerHTML = "<span>"+(i+1)+". "+escapeHtml(dp)+"</span>"
+        item.innerHTML = "<div class='rk-fill' style='width:"+(entry[1]/maxS*100)+"%'></div>"
+            + "<span class='rk-name'><span class='rk-pos'>"+(i+1)+"</span>"+avatarHtml(dp)+escapeHtml(dp)+"</span>"
             + "<span class='ranking-rate'>"+rate+"%</span>"
             + "<span class='ranking-score'>"+entry[1]+"</span>";
         if(vRank<3) ps.appendChild(item); else rs.appendChild(item);
