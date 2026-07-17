@@ -770,25 +770,42 @@ function updateRanking(){
     chipStreak.textContent = current.len > 1 ? cap(current.name) + ' ×' + current.len : '—';
 
     pDiv.innerHTML = ""; fDiv.innerHTML = "";
+
+    // Podium de cérémonie : 3 marches toujours visibles, places libres en pointillés
+    [{rank:1,cls:"second",e:"🥈"},{rank:0,cls:"first",e:"🥇"},{rank:2,cls:"third",e:"🥉"}].forEach(s=>{
+        const entry = sorted[s.rank];
+        const slot = document.createElement("div");
+        slot.className = "pod-slot" + (entry ? "" : " vacant");
+        if(entry){
+            const nm = cap(entry[0]), sc = entry[1];
+            slot.innerHTML = `
+                <div class="pod-player">
+                    ${s.rank===0 ? `
+                        <span class="pod-burst"></span>
+                        <span class="pod-crown">👑</span>
+                        <span class="pod-spark s1">✦</span>
+                        <span class="pod-spark s2">✦</span>` : ''}
+                    ${avatarHtml(nm,'av-pod')}
+                    <b class="pod-name">${escapeHtml(nm)}</b>
+                    <span class="pod-score">${s.e} ${sc}</span>
+                </div>
+                <div class="pod-step ${s.cls}"><span class="pod-rank">${s.rank+1}</span></div>`;
+        } else {
+            slot.innerHTML = `
+                <div class="pod-player ghost">
+                    <span class="pod-ghost-av">?</span>
+                    <b class="pod-name">Place libre</b>
+                </div>
+                <div class="pod-step ${s.cls} empty"><span class="pod-rank">${s.rank+1}</span></div>`;
+        }
+        pDiv.appendChild(slot);
+    });
+
     if(!sorted.length){ chipLeader.textContent = "—"; return; }
 
     const maxS = sorted[0][1];
     const leaderList = sorted.filter(p=>p[1]===maxS).map(p=>cap(p[0]));
     chipLeader.textContent = leaderList.join(", ") + " · " + maxS;
-
-    [{rank:1,cls:"second",e:"🥈"},{rank:0,cls:"first",e:"🥇"},{rank:2,cls:"third",e:"🥉"}].forEach(s=>{
-        if(sorted[s.rank]){
-            const nm = cap(sorted[s.rank][0]);
-            const sc = sorted[s.rank][1];
-            const b = document.createElement("div"); b.className = "pod "+s.cls;
-            b.innerHTML =
-                (s.rank===0 ? '<span class="pod-crown">👑</span>' : '')
-                + avatarHtml(nm,'av-md')
-                + '<b class="pod-name">'+escapeHtml(nm)+'</b>'
-                + '<span class="pod-score">'+s.e+' '+sc+'</span>';
-            pDiv.appendChild(b);
-        }
-    });
 
     let lastScore=null, vRank=-1;
     const ps = document.createElement("div"); ps.className="ranking-section";

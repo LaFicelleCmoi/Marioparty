@@ -224,63 +224,143 @@ body {
     transition: width 0.8s ease;
 }
 
-/* ── Podium ── */
+/* ── Podium de cérémonie ── */
 .podium {
     display: flex; align-items: flex-end; justify-content: center;
-    gap: 16px; padding-top: 64px; margin-top: 8px;
+    gap: 18px; padding-top: 14px; margin-top: 10px;
 }
-.pod {
-    text-align: center; padding: 30px 12px 10px;
-    border-radius: 14px 14px 6px 6px;
-    border: 3px solid var(--ink);
-    box-shadow: 5px 5px 0 var(--shadow-c);
-    min-width: 94px; position: relative;
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-    color: var(--ink);
+.pod-slot { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+.pod-player {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding-top: 26px;   /* place pour la couronne */
+}
+.avatar.av-pod {
+    width: 48px; height: 48px; font-size: 1.3em;
+    box-shadow: 2.5px 2.5px 0 var(--shadow-c);
+    position: relative; z-index: 1;
 }
 .pod-name {
-    font-size: 0.95em; max-width: 110px; font-weight: 800;
+    font-size: 0.92em; max-width: 104px; font-weight: 800; color: var(--text);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-align: center;
 }
 .pod-score {
-    display: inline-block; margin-top: 4px;
-    background: rgba(255,255,255,0.75); border: 2px solid var(--ink);
+    display: inline-block;
+    background: rgba(255,255,255,0.85); border: 2px solid var(--ink);
     border-radius: 12px;
-    padding: 0 10px; font-weight: 800; font-size: 0.88em; color: var(--ink);
+    padding: 0 10px; font-weight: 800; font-size: 0.85em; color: var(--ink);
+    box-shadow: 2px 2px 0 var(--shadow-c);
 }
 .pod-crown {
-    position: absolute; top: -54px; left: 50%; transform: translateX(-50%);
-    font-size: 1.8em;
+    position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+    font-size: 1.55em; z-index: 2;
     filter: drop-shadow(2px 3px 0 rgba(0,0,0,0.55));
     animation: crownBob 2s ease-in-out infinite;
 }
 @keyframes crownBob {
     0%, 100% { transform: translateX(-50%) translateY(0)    rotate(-4deg); }
-    50%       { transform: translateX(-50%) translateY(-7px) rotate(4deg); }
+    50%       { transform: translateX(-50%) translateY(-6px) rotate(4deg); }
+}
+
+/* rayons de soleil derrière le n°1 */
+.pod-burst {
+    position: absolute; top: 6px; left: 50%; margin-left: -44px;
+    width: 88px; height: 88px; border-radius: 50%; z-index: 0;
+    background: repeating-conic-gradient(rgba(251,208,0,0.4) 0 12deg, transparent 12deg 24deg);
+    -webkit-mask-image: radial-gradient(circle, black 25%, transparent 68%);
+    mask-image: radial-gradient(circle, black 25%, transparent 68%);
+    animation: burstSpin 16s linear infinite;
+    pointer-events: none;
+}
+@keyframes burstSpin { to { transform: rotate(360deg); } }
+
+/* étincelles */
+.pod-spark {
+    position: absolute; z-index: 2; pointer-events: none;
+    color: var(--m-yellow); text-shadow: 1.5px 1.5px 0 var(--ink);
+    font-size: 0.95em;
+    animation: sparkTw 1.6s ease-in-out infinite;
+}
+.pod-spark.s1 { top: 20px; left: -16px; }
+.pod-spark.s2 { top: 44px; right: -18px; animation-delay: 0.8s; }
+@keyframes sparkTw {
+    0%, 100% { opacity: 0.25; transform: scale(0.7) rotate(0deg); }
+    50%      { opacity: 1;    transform: scale(1.2) rotate(30deg); }
+}
+
+/* marches */
+.pod-step {
+    width: 96px;
+    border: 3px solid var(--ink);
+    border-radius: 12px 12px 6px 6px;
+    box-shadow: 5px 5px 0 var(--shadow-c);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+}
+.pod-step::before {   /* face supérieure éclairée */
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 12px;
+    background: rgba(255,255,255,0.45);
+    border-bottom: 2px solid rgba(10,10,20,0.3);
+}
+.pod-step::after {    /* reflet qui balaye */
+    content: ''; position: absolute; top: 0; left: -70%; width: 45%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.5), transparent);
+    transform: skewX(-18deg);
+    animation: stepShine 3.8s ease-in-out infinite;
+}
+@keyframes stepShine {
+    0%, 55%   { left: -70%; }
+    85%, 100% { left: 130%; }
+}
+.pod-rank {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.1em; line-height: 1;
+    color: rgba(10,10,20,0.8);
+    text-shadow: 2px 2px 0 rgba(255,255,255,0.45);
+    margin-top: 8px;
 }
 @keyframes lavaFlow {
     0%   { background-position: 0% 50%; }
     50%  { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
-.first {
-    height: 118px;
+.pod-step.first {
+    height: 112px;
     background: linear-gradient(110deg, #ffcf33 0%, #ffe066 30%, #fff3b0 50%, #ffe066 70%, #ffcf33 100%);
     background-size: 250% 250%;
     animation: lavaFlow 4s ease-in-out infinite;
 }
-.second {
-    height: 88px;
+.pod-step.second {
+    height: 82px;
     background: linear-gradient(110deg, #c9cdd4 0%, #e2e6ea 30%, #f4f6f8 50%, #e2e6ea 70%, #c9cdd4 100%);
     background-size: 250% 250%;
     animation: lavaFlow 4s ease-in-out infinite;
 }
-.third {
-    height: 68px;
+.pod-step.third {
+    height: 62px;
     background: linear-gradient(110deg, #e0a066 0%, #ecb583 30%, #f8dfc0 50%, #ecb583 70%, #e0a066 100%);
     background-size: 250% 250%;
     animation: lavaFlow 4s ease-in-out infinite;
 }
+
+/* places libres */
+.pod-step.empty {
+    background: rgba(255,255,255,0.04);
+    border-style: dashed; border-color: rgba(246,241,227,0.3);
+    box-shadow: none;
+    animation: none;
+}
+.pod-step.empty::before, .pod-step.empty::after { display: none; }
+.pod-step.empty .pod-rank { color: rgba(246,241,227,0.22); text-shadow: none; margin-top: 0; }
+.pod-ghost-av {
+    width: 48px; height: 48px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px dashed rgba(246,241,227,0.35);
+    color: var(--muted); font-weight: 800; font-size: 1.2em;
+}
+.vacant .pod-name { color: var(--muted); font-size: 0.78em; font-weight: 700; }
 
 /* ============================================================
    CARTES MOIS (bandeau saisonnier)
@@ -843,10 +923,11 @@ footer::before {
     .chip { min-width: 128px; padding: 8px 12px; }
     .container { grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 16px; }
     #partList { grid-template-columns: repeat(3, 1fr); }
-    .pod { min-width: 74px; padding: 26px 8px 8px; font-size: 0.9em; }
-    .first  { height: 100px; }
-    .second { height: 75px; }
-    .third  { height: 58px; }
+    .pod-step { width: 80px; }
+    .pod-step.first  { height: 94px; }
+    .pod-step.second { height: 70px; }
+    .pod-step.third  { height: 54px; }
+    .avatar.av-pod, .pod-ghost-av { width: 42px; height: 42px; }
     #rankingPanel { width: 85vw; max-width: 320px; padding: 20px 16px; }
     #rankingPanel h2 { font-size: 1.3em; padding-right: 44px; }
     #statsPanel { width: 85vw; max-width: 360px; padding: 20px 16px; }
@@ -872,12 +953,16 @@ footer::before {
     #yearProgress { padding: 0 8px; }
     .yp-label { font-size: 0.72em; }
 
-    .podium { gap: 10px; padding-top: 58px; }
-    .pod { min-width: 64px; padding: 24px 6px 8px; font-size: 0.82em; box-shadow: 3px 3px 0 var(--shadow-c); }
-    .pod-name { max-width: 76px; }
-    .first  { height: 85px; }
-    .second { height: 65px; }
-    .third  { height: 50px; }
+    .podium { gap: 10px; padding-top: 10px; }
+    .pod-step { width: 66px; box-shadow: 3px 3px 0 var(--shadow-c); }
+    .pod-step.first  { height: 80px; }
+    .pod-step.second { height: 60px; }
+    .pod-step.third  { height: 46px; }
+    .pod-rank { font-size: 1.7em; }
+    .avatar.av-pod, .pod-ghost-av { width: 38px; height: 38px; font-size: 1.05em; }
+    .pod-name { max-width: 70px; font-size: 0.8em; }
+    .pod-score { font-size: 0.78em; }
+    .pod-burst { width: 72px; height: 72px; margin-left: -36px; }
 
     .container { grid-template-columns: 1fr; gap: 14px; padding: 12px; }
     .month { box-shadow: 4px 4px 0 var(--shadow-c); }
