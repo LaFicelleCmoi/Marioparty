@@ -156,18 +156,23 @@ let participants = [];
     });
     participants = kept;
 
-    // 2) Crée les participants manquants depuis les parties
+    // 2) Crée les participants manquants depuis les parties (toutes places)
     games.forEach(g=>{
-        if(g.name && !participants.find(p => sameNorm(p.name, g.name))){
-            participants.push({ name: String(g.name).trim(), extraGames: 0 });
-        }
+        [g.name, g.second, g.third].filter(Boolean).forEach(n=>{
+            if(!participants.find(p => sameNorm(p.name, n))){
+                participants.push({ name: String(n).trim(), extraGames: 0 });
+            }
+        });
     });
 
-    // 3) Réécrit chaque partie avec le nom officiel du joueur
+    // 3) Réécrit chaque place avec le nom officiel du joueur
     let changed = false;
     games.forEach(g=>{
-        const canon = canonicalName(g.name);
-        if(canon !== g.name){ g.name = canon; changed = true; }
+        ['name','second','third'].forEach(k=>{
+            if(!g[k]) return;
+            const canon = canonicalName(g[k]);
+            if(canon !== g[k]){ g[k] = canon; changed = true; }
+        });
     });
 
     saveParts();
@@ -338,10 +343,15 @@ function addParticipant(){
 function removeParticipant(name){
     withUndo(name + ' supprimé', ()=>{
         participants = participants.filter(p => p.name !== name);
-        // Retire aussi ses parties, sinon il reste au classement
-        // et serait recréé automatiquement au prochain chargement.
+        // Retire ses victoires et libère ses places de podium, sinon il
+        // resterait au classement et serait recréé au prochain chargement.
         const norm = normName(name);
         games = games.filter(g => normName(g.name) !== norm);
+        games.forEach(g=>{
+            ['second','third'].forEach(k=>{
+                if(g[k] && normName(g[k]) === norm) g[k] = null;
+            });
+        });
         saveParts(); saveData();
         renderParticipants(); render();
         Sound.del();
@@ -357,18 +367,19 @@ function changeGames(name, delta){
     Sound.click();
 }
 
+function gamePlaces(g){ return [g.name, g.second, g.third].filter(Boolean); }
+
 function getParticipantStats(name){
     const norm = normName(name);
-    let wins = 0, played = 0;
+    let wins = 0, played = 0, podiums = 0;
     games.forEach(g=>{
-        if(normName(g.name) === norm){
-            played++;
-            if(!g.passed) wins++;
-        }
+        const onPodium = gamePlaces(g).some(n => normName(n) === norm);
+        if(onPodium){ played++; podiums++; }
+        if(normName(g.name) === norm && !g.passed) wins++;
     });
     const p = participants.find(p => normName(p.name) === norm);
     const extraGames = p ? (p.extraGames || 0) : 0;
-    return { wins, participations: played + extraGames };
+    return { wins, podiums, participations: played + extraGames };
 }
 
 function renderParticipants(){
@@ -468,6 +479,7 @@ function openPlayerCard(name){
         <h3 class="pc-name">${escapeHtml(name)}</h3>
         <div class="pc-chips">
             <div class="pc-chip"><b>${stats.wins}</b><span>Victoires</span></div>
+            <div class="pc-chip"><b>${stats.podiums}</b><span>Podiums</span></div>
             <div class="pc-chip"><b>${stats.participations}</b><span>Parties</span></div>
             <div class="pc-chip"><b>${winrate}%</b><span>Réussite</span></div>
             <div class="pc-chip"><b>${rankTxt}</b><span>Rang</span></div>
@@ -498,17 +510,24 @@ function openModal(action, title, initialValue="", extraData=null){
         input.style.display = 'none'; msg.style.display = 'block'; msg.textContent = initialValue;
     } else {
         input.style.display = 'block'; msg.style.display = 'none';
+        input.placeholder = (action === 'place' && currentAction.place !== 'name')
+            ? 'Nom (vide = libérer la place)' : 'Entrez un nom...';
         input.value = initialValue; setTimeout(()=>input.focus(), 100);
     }
     renderSuggest(input.value);
     modal.classList.add("open");
+}
+
+function openPlaceModal(index, key, medal, label){
+    const g = games[index]; if(!g) return;
+    openModal('place', medal + ' Partie ' + (index+1) + ' — ' + label, g[key] ? String(g[key]) : '', { index, place: key });
 }
 function closeModal(){ document.getElementById("customModal").classList.remove("open"); currentAction = null; }
 
 // Suggestions de joueurs existants dans la modale (un clic = validé)
 function renderSuggest(filter=''){
     const box = document.getElementById('modalSuggest');
-    if(!currentAction || (currentAction.type !== 'add' && currentAction.type !== 'edit')){
+    if(!currentAction || !['add','edit','place'].includes(currentAction.type)){
         box.innerHTML = ''; return;
     }
     const f = normName(filter);
@@ -551,18 +570,33 @@ document.getElementById("modalConfirmBtn").onclick = () => {
             Sound.fanfare();
             showToast(games.length + ' parties jouées cette saison ! 🏁', { icon:'🎉' });
         }
-    } else if(currentAction.type === 'edit' && inputVal){
-        const canon = canonicalName(inputVal);
+    } else if(currentAction.type === 'place'){
         const g = games[currentAction.index];
-        if(g) g.name = canon;
-        if(!participants.find(p => sameNorm(p.name, canon))){
-            participants.push({ name: canon, extraGames: 0 });
-            saveParts();
-        }
-        saveData(); render();
-        Sound.click();
-        if(normName(canon) !== normName(inputVal)){
-            showToast('Compté pour ' + canon, { icon:'🔗' });
+        const key = currentAction.place;   // 'name' | 'second' | 'third'
+        if(g){
+            if(!inputVal){
+                // champ vide = libérer la place (sauf le vainqueur, obligatoire)
+                if(key !== 'name' && g[key]){
+                    g[key] = null; saveData(); render(); Sound.click();
+                }
+            } else {
+                const canon = canonicalName(inputVal);
+                const others = ['name','second','third'].filter(k=>k!==key).map(k=>g[k]).filter(Boolean);
+                if(others.some(n => normName(n) === normName(canon))){
+                    showToast(canon + ' est déjà sur ce podium', { icon:'⚠️' });
+                } else {
+                    g[key] = canon;
+                    if(!participants.find(p => sameNorm(p.name, canon))){
+                        participants.push({ name: canon, extraGames: 0 });
+                        saveParts();
+                    }
+                    saveData(); render();
+                    key === 'name' ? Sound.coin() : Sound.click();
+                    if(normName(canon) !== normName(inputVal)){
+                        showToast('Compté pour ' + canon, { icon:'🔗' });
+                    }
+                }
+            }
         }
     } else if(currentAction.type === 'confirm_import'){
         games = currentAction.newGames; saveData();
@@ -711,32 +745,51 @@ function render(){
             if(monthWins[(m||'?')+'|'+nName] >= 3) badges += `<span class="badge" title="Roi du mois">👑</span>`;
         }
 
-        const ul = document.createElement("ul");
-        const li = document.createElement("li");
-        const span = document.createElement("span"); span.className = "name";
-        if(g.passed) span.classList.add("passed");
-        span.innerHTML = avatarHtml(g.name) + '<span class="name-txt">' + escapeHtml(g.name) + '</span>' + badges;
-        span.title = "Cliquer pour marquer absent / présent";
-        span.onclick = ()=>{ g.passed = !g.passed; saveData(); render(); Sound.click(); };
+        // Podium de la partie : 🥇 / 🥈 / 🥉, chaque ligne est cliquable
+        const ul = document.createElement("ul"); ul.className = "podium-rows";
+        [
+            { key:'name',   medal:'🥇', cls:'gold',   label:'vainqueur' },
+            { key:'second', medal:'🥈', cls:'silver', label:'2e place' },
+            { key:'third',  medal:'🥉', cls:'bronze', label:'3e place' }
+        ].forEach(pl=>{
+            const val = g[pl.key];
+            const li = document.createElement("li");
+            li.className = "place-row " + pl.cls;
+            if(val){
+                const passedCls = (pl.key==='name' && g.passed) ? ' passed' : '';
+                if(pl.key==='name' && g.passed) li.classList.add('passed-row');
+                li.innerHTML = `<span class="place-medal">${pl.medal}</span>`
+                    + `<span class="name${passedCls}">${avatarHtml(val)}<span class="name-txt">${escapeHtml(val)}</span>${pl.key==='name' ? badges : ''}</span>`;
+            } else {
+                li.classList.add('vacant-row');
+                li.innerHTML = `<span class="place-medal">${pl.medal}</span><span class="place-add">＋ Ajouter</span>`;
+            }
+            li.title = "Partie " + (i+1) + " — " + pl.label;
+            li.onclick = ()=> openPlaceModal(i, pl.key, pl.medal, pl.label);
+            ul.appendChild(li);
+        });
+        card.appendChild(ul);
 
+        const foot = document.createElement("div"); foot.className = "game-foot";
+        const dt = document.createElement("span"); dt.className = "game-date";
+        const dtxt = gameDateText(g);
+        dt.textContent = dtxt ? "📅 " + dtxt : "📅 —";
         const bc = document.createElement("div"); bc.className = "buttons";
-        const eb = document.createElement("button"); eb.textContent="✏"; eb.className="edit-btn";
-        eb.onclick = ()=>{ openModal('edit','Partie '+(i+1)+' — modifier', String(g.name), {index:i}); };
+        const fb = document.createElement("button"); fb.className = "flag-btn";
+        fb.textContent = g.passed ? "↩" : "🚫";
+        fb.title = g.passed ? "Réactiver la victoire" : "Marquer le vainqueur absent (ne compte pas)";
+        fb.onclick = ()=>{ g.passed = !g.passed; saveData(); render(); Sound.click(); };
         const db = document.createElement("button"); db.textContent="🗑"; db.className="delete-btn";
+        db.title = "Supprimer la partie";
         db.onclick = ()=>{
             withUndo('Partie '+(i+1)+' supprimée', ()=>{
                 games.splice(i,1); saveData(); render();
                 Sound.del();
             });
         };
-        bc.appendChild(eb); bc.appendChild(db);
-        li.appendChild(span); li.appendChild(bc); ul.appendChild(li);
-        card.appendChild(ul);
-
-        const dt = document.createElement("div"); dt.className = "game-date";
-        const dtxt = gameDateText(g);
-        dt.textContent = dtxt ? "📅 " + dtxt : "📅 —";
-        card.appendChild(dt);
+        bc.appendChild(fb); bc.appendChild(db);
+        foot.appendChild(dt); foot.appendChild(bc);
+        card.appendChild(foot);
 
         container.appendChild(card);
     });

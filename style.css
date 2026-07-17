@@ -403,15 +403,43 @@ body {
     font-size: 1.18em; letter-spacing: 0.5px;
     color: var(--text);
 }
-/* ── Carte partie ── */
+/* ── Carte partie : podium 🥇🥈🥉 ── */
 .game-card { display: flex; flex-direction: column; }
 .game-card h2 { font-size: 1.08em; }
 .game-card ul { flex: 1; }
-.game-date {
-    text-align: center; font-size: 0.78em; font-weight: 800;
-    color: var(--muted); letter-spacing: 0.5px;
-    margin-top: 6px;
+
+.podium-rows .place-row { cursor: pointer; gap: 8px; }
+.place-medal { flex-shrink: 0; font-size: 1.05em; filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.35)); }
+.place-row.gold   { background: #ffe9a3; color: var(--ink); border-color: var(--ink); }
+.place-row.silver { background: #eceef1; color: var(--ink); border-color: var(--ink); }
+.place-row.bronze { background: #f7dfc4; color: var(--ink); border-color: var(--ink); }
+.place-row.gold:hover, .place-row.silver:hover, .place-row.bronze:hover {
+    filter: brightness(1.05); border-color: var(--ink);
 }
+.place-row .avatar { border-color: var(--ink); }
+.place-row.passed-row { filter: grayscale(0.8); opacity: 0.7; }
+
+.place-row.vacant-row {
+    background: transparent; border: 2px dashed rgba(246,241,227,0.22);
+    color: var(--muted);
+}
+.place-row.vacant-row:hover {
+    background: rgba(251,208,0,0.06);
+    border-color: var(--m-yellow); color: var(--text);
+    transform: translateX(3px);
+}
+.place-row.vacant-row .place-medal { opacity: 0.45; filter: grayscale(1); }
+.place-add { font-weight: 800; font-size: 0.85em; letter-spacing: 0.5px; }
+
+.game-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px; gap: 8px;
+}
+.game-date {
+    font-size: 0.78em; font-weight: 800;
+    color: var(--muted); letter-spacing: 0.5px;
+}
+.flag-btn { background: #aab2bd; color: var(--ink); }
 
 /* ── Carte « Nouvelle partie » ── */
 .add-game-card {
