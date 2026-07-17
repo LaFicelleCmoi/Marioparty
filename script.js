@@ -745,30 +745,39 @@ function render(){
             if(monthWins[(m||'?')+'|'+nName] >= 3) badges += `<span class="badge" title="Roi du mois">👑</span>`;
         }
 
-        // Podium de la partie : 🥇 / 🥈 / 🥉, chaque ligne est cliquable
-        const ul = document.createElement("ul"); ul.className = "podium-rows";
+        // Podium de la partie : mêmes marches que le podium général, en mini
+        const pod = document.createElement("div"); pod.className = "mini-podium";
         [
-            { key:'name',   medal:'🥇', cls:'gold',   label:'vainqueur' },
-            { key:'second', medal:'🥈', cls:'silver', label:'2e place' },
-            { key:'third',  medal:'🥉', cls:'bronze', label:'3e place' }
+            { key:'second', rank:2, cls:'second', medal:'🥈', label:'2e place' },
+            { key:'name',   rank:1, cls:'first',  medal:'🥇', label:'vainqueur' },
+            { key:'third',  rank:3, cls:'third',  medal:'🥉', label:'3e place' }
         ].forEach(pl=>{
             const val = g[pl.key];
-            const li = document.createElement("li");
-            li.className = "place-row " + pl.cls;
+            const slot = document.createElement("div");
+            slot.className = "mp-slot" + (val ? "" : " vacant");
+            if(pl.key==='name' && g.passed) slot.classList.add("passed-slot");
+            slot.title = "Partie " + (i+1) + " — " + pl.label;
+            slot.onclick = ()=> openPlaceModal(i, pl.key, pl.medal, pl.label);
             if(val){
-                const passedCls = (pl.key==='name' && g.passed) ? ' passed' : '';
-                if(pl.key==='name' && g.passed) li.classList.add('passed-row');
-                li.innerHTML = `<span class="place-medal">${pl.medal}</span>`
-                    + `<span class="name${passedCls}">${avatarHtml(val)}<span class="name-txt">${escapeHtml(val)}</span>${pl.key==='name' ? badges : ''}</span>`;
+                slot.innerHTML = `
+                    <div class="mp-player">
+                        ${pl.key==='name' ? '<span class="mp-crown">👑</span>' : ''}
+                        ${avatarHtml(val,'av-mp')}
+                        <b class="mp-name${pl.key==='name' && g.passed ? ' passed' : ''}">${escapeHtml(val)}</b>
+                        ${pl.key==='name' && badges ? `<span class="mp-badges">${badges}</span>` : ''}
+                    </div>
+                    <div class="mp-step ${pl.cls}"><span class="mp-rank">${pl.rank}</span></div>`;
             } else {
-                li.classList.add('vacant-row');
-                li.innerHTML = `<span class="place-medal">${pl.medal}</span><span class="place-add">＋ Ajouter</span>`;
+                slot.innerHTML = `
+                    <div class="mp-player ghost">
+                        <span class="mp-ghost">?</span>
+                        <b class="mp-name mp-add">＋</b>
+                    </div>
+                    <div class="mp-step ${pl.cls} empty"><span class="mp-rank">${pl.rank}</span></div>`;
             }
-            li.title = "Partie " + (i+1) + " — " + pl.label;
-            li.onclick = ()=> openPlaceModal(i, pl.key, pl.medal, pl.label);
-            ul.appendChild(li);
+            pod.appendChild(slot);
         });
-        card.appendChild(ul);
+        card.appendChild(pod);
 
         const foot = document.createElement("div"); foot.className = "game-foot";
         const dt = document.createElement("span"); dt.className = "game-date";
