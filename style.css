@@ -286,8 +286,8 @@ body {
    CARTES MOIS (bandeau saisonnier)
    ============================================================ */
 .container {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 22px; padding: 22px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px; padding: 22px;
     max-width: 1440px; margin: 0 auto;
 }
 .month { --sea: var(--m-blue); }
@@ -323,12 +323,39 @@ body {
     font-size: 1.18em; letter-spacing: 0.5px;
     color: var(--text);
 }
-.empty-slot {
-    background: transparent !important;
-    border: 2px dashed rgba(246,241,227,0.25) !important;
-    justify-content: center; opacity: 0.55; font-style: italic; font-size: 0.85em;
+/* ── Carte partie ── */
+.game-card { display: flex; flex-direction: column; }
+.game-card h2 { font-size: 1.08em; }
+.game-card ul { flex: 1; }
+.game-date {
+    text-align: center; font-size: 0.78em; font-weight: 800;
+    color: var(--muted); letter-spacing: 0.5px;
+    margin-top: 6px;
 }
-.empty-slot:hover { transform: none !important; }
+
+/* ── Carte « Nouvelle partie » ── */
+.add-game-card {
+    min-height: 140px;
+    border: 3px dashed rgba(246,241,227,0.35); border-radius: 18px;
+    background: rgba(255,255,255,0.03); color: var(--text);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    font-family: 'Fredoka One', cursive; font-size: 1.05em; letter-spacing: 0.5px;
+    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+}
+.add-game-card:hover {
+    border-color: var(--m-yellow); background: rgba(251,208,0,0.08);
+    transform: translate(-2px,-2px);
+}
+.add-game-card:active { transform: translate(1px,1px); }
+.add-game-card .agc-plus {
+    font-size: 2em; line-height: 1;
+    color: var(--m-yellow); text-shadow: 2px 2px 0 var(--ink);
+}
+.add-game-card small {
+    font-family: 'Nunito', sans-serif; font-size: 0.62em;
+    color: var(--muted); font-weight: 700; letter-spacing: 1px;
+}
+.add-game-card.animate-in { animation: cardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 .progress-container {
     height: 10px; background: rgba(0,0,0,0.35);

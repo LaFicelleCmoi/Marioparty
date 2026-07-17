@@ -11,15 +11,21 @@ function escapeHtml(str){
 }
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
+function encrypt(obj){ return CryptoJS.AES.encrypt(JSON.stringify(obj), SECRET_KEY).toString(); }
+function decrypt(cipher){
+    try { return JSON.parse(CryptoJS.AES.decrypt(cipher, SECRET_KEY).toString(CryptoJS.enc.Utf8)); }
+    catch(e){ return null; }
+}
+
 // Avatar à initiale, teinte stable dérivée du nom
 function nameHue(name){
     let h = 0;
-    for(const c of name.toLowerCase()) h = (h*31 + c.charCodeAt(0)) >>> 0;
+    for(const c of String(name).toLowerCase()) h = (h*31 + c.charCodeAt(0)) >>> 0;
     return h % 360;
 }
 function avatarHtml(name, cls=''){
     const hue = nameHue(normName(name) || name);
-    const ini = escapeHtml(name.trim().charAt(0).toUpperCase() || '?');
+    const ini = escapeHtml(String(name).trim().charAt(0).toUpperCase() || '?');
     return `<span class="avatar ${cls}" style="background:linear-gradient(135deg,hsl(${hue},72%,55%),hsl(${(hue+45)%360},72%,38%))">${ini}</span>`;
 }
 
@@ -47,8 +53,6 @@ function levenshtein(a, b){
     }
     return prev[n];
 }
-// Même joueur ? Exact après normalisation, ou 1-2 lettres d'écart
-// (jamais de fuzzy sur les noms très courts pour ne pas confondre Tom/Tam)
 function sameNorm(a, b){
     const na = normName(a), nb = normName(b);
     if(na === nb) return true;
@@ -57,7 +61,6 @@ function sameNorm(a, b){
     const tol = len >= 7 ? 2 : 1;
     return levenshtein(na, nb) <= tol;
 }
-// Nom officiel du joueur correspondant (sinon le nom saisi tel quel)
 function canonicalName(input){
     const exact = participants.find(p => normName(p.name) === normName(input));
     if(exact) return exact.name;
@@ -65,60 +68,80 @@ function canonicalName(input){
     return fuzzy ? fuzzy.name : String(input).trim();
 }
 
-function encrypt(obj){ return CryptoJS.AES.encrypt(JSON.stringify(obj), SECRET_KEY).toString(); }
-function decrypt(cipher){
-    try { return JSON.parse(CryptoJS.AES.decrypt(cipher, SECRET_KEY).toString(CryptoJS.enc.Utf8)); }
-    catch(e){ return null; }
-}
-
 // ============================================================
-// 🎮 DONNÉES PRINCIPALES
+// 🎮 DONNÉES — liste de parties illimitée
+// game = { name, passed, date: "YYYY-MM-DD"|null, label?: mois d'origine }
 // ============================================================
-const maxWins = {
-    "Janvier":4,"Février":4,"Mars":5,"Avril":4,
-    "Mai":4,"Juin":5,"Juillet":4,"Août":5,
-    "Septembre":4,"Octobre":4,"Novembre":5,"Décembre":4
-};
-const monthOrder = Object.keys(maxWins);
-const MONTH_EMOJI = {
-    "Janvier":"❄️","Février":"🌨️","Mars":"🌱","Avril":"🌸",
-    "Mai":"🌼","Juin":"☀️","Juillet":"🏖️","Août":"🌴",
-    "Septembre":"🍂","Octobre":"🎃","Novembre":"🌧️","Décembre":"🎄"
-};
+const monthOrder = ["Janvier","Février","Mars","Avril","Mai","Juin",
+                    "Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 const MONTH_SEASON = {
     "Janvier":"winter","Février":"winter","Mars":"spring","Avril":"spring",
     "Mai":"spring","Juin":"summer","Juillet":"summer","Août":"summer",
     "Septembre":"autumn","Octobre":"autumn","Novembre":"autumn","Décembre":"winter"
 };
-const TOTAL_GAMES = Object.values(maxWins).reduce((a,b)=>a+b,0);
-const defaultData = {
-    "Janvier":[],"Février":[],"Mars":[],"Avril":[],"Mai":[],"Juin":[],
-    "Juillet":[],"Août":[],"Septembre":[],"Octobre":[],"Novembre":[],"Décembre":[]
-};
+const SEASON_GOAL = 52; // objectif indicatif : une partie par semaine
 
-let rawData = localStorage.getItem("marioParty2026");
-let data;
-if(rawData){
-    const dec = decrypt(rawData);
-    if(dec){ data = dec; }
-    else {
-        try { data = JSON.parse(rawData); localStorage.setItem("marioParty2026", encrypt(data)); }
-        catch(e){ data = defaultData; }
+// Ancien format {Janvier:[...], ...} → liste de parties
+function migrateMonths(monthMap){
+    const out = [];
+    monthOrder.forEach(m=>{
+        (monthMap[m] || []).forEach(raw=>{
+            const clean = String(raw).replace('#','').trim();
+            if(clean) out.push({ name: clean, passed: String(raw).includes('#'), date: null, label: m });
+        });
+    });
+    return out;
+}
+function normalizeGamesInput(obj){
+    if(obj && obj.v === 2 && Array.isArray(obj.games)) return obj.games;
+    if(obj && obj["Janvier"] && Array.isArray(obj["Janvier"])) return migrateMonths(obj);
+    return null;
+}
+
+let games = [];
+{
+    const raw = localStorage.getItem("marioParty2026");
+    if(raw){
+        let dec = decrypt(raw);
+        if(!dec){ try { dec = JSON.parse(raw); } catch(e){ dec = null; } }
+        const g = normalizeGamesInput(dec);
+        if(g) games = g;
     }
-} else { data = defaultData; }
+}
+
+function monthOfGame(g){
+    if(g.label) return g.label;
+    if(g.date){
+        const d = new Date(g.date + "T12:00:00");
+        if(!isNaN(d)) return monthOrder[d.getMonth()];
+    }
+    return null;
+}
+function gameDateText(g){
+    if(g.date){
+        const d = new Date(g.date + "T12:00:00");
+        if(!isNaN(d)) return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'long' });
+    }
+    return g.label || null;
+}
+
+function saveData(){ localStorage.setItem("marioParty2026", encrypt({ v:2, games })); }
+function saveParts(){ localStorage.setItem("mp26_participants", encrypt(participants)); }
 
 // ============================================================
 // 👥 PARTICIPANTS
 // ============================================================
 let participants = [];
-const rawParts = localStorage.getItem("mp26_participants");
-if(rawParts){
-    const dec = decrypt(rawParts);
-    if(dec){
-        if(dec.length && typeof dec[0] === 'string'){
-            participants = dec.map(n => ({ name: n, extraGames: 0 }));
-        } else {
-            participants = dec;
+{
+    const rawParts = localStorage.getItem("mp26_participants");
+    if(rawParts){
+        const dec = decrypt(rawParts);
+        if(dec){
+            if(dec.length && typeof dec[0] === 'string'){
+                participants = dec.map(n => ({ name: n, extraGames: 0 }));
+            } else {
+                participants = dec;
+            }
         }
     }
 }
@@ -133,34 +156,23 @@ if(rawParts){
     });
     participants = kept;
 
-    // 2) Crée les participants manquants depuis les données
-    Object.values(data).forEach(month=>{
-        month.forEach(raw=>{
-            const clean = raw.replace('#','').trim();
-            if(clean && !participants.find(p => sameNorm(p.name, clean))){
-                participants.push({ name: clean, extraGames: 0 });
-            }
-        });
+    // 2) Crée les participants manquants depuis les parties
+    games.forEach(g=>{
+        if(g.name && !participants.find(p => sameNorm(p.name, g.name))){
+            participants.push({ name: String(g.name).trim(), extraGames: 0 });
+        }
     });
 
-    // 3) Réécrit chaque entrée avec le nom officiel du joueur
+    // 3) Réécrit chaque partie avec le nom officiel du joueur
     let changed = false;
-    Object.keys(data).forEach(m=>{
-        data[m] = data[m].map(raw=>{
-            const passed = raw.includes('#');
-            const canon = canonicalName(raw.replace('#','').trim());
-            const out = canon + (passed ? '#' : '');
-            if(out !== raw) changed = true;
-            return out;
-        });
+    games.forEach(g=>{
+        const canon = canonicalName(g.name);
+        if(canon !== g.name){ g.name = canon; changed = true; }
     });
 
     saveParts();
     if(changed) saveData();
 })();
-
-function saveData(){ localStorage.setItem("marioParty2026", encrypt(data)); }
-function saveParts(){ localStorage.setItem("mp26_participants", encrypt(participants)); }
 
 // ============================================================
 // 🔊 SONS RÉTRO (WebAudio — aucun fichier externe)
@@ -227,13 +239,13 @@ function showToast(msg, opts={}){
 }
 
 function snapshotState(){
-    return { data: JSON.parse(JSON.stringify(data)), participants: JSON.parse(JSON.stringify(participants)) };
+    return { games: JSON.parse(JSON.stringify(games)), participants: JSON.parse(JSON.stringify(participants)) };
 }
 function withUndo(label, mutate){
     const snap = snapshotState();
     mutate();
     showToast(label, { actionLabel:'Annuler', icon:'🗑️', onAction:()=>{
-        data = snap.data; participants = snap.participants;
+        games = snap.games; participants = snap.participants;
         saveData(); saveParts(); render();
         if(openPanel === 'parts') renderParticipants();
         Sound.undo();
@@ -283,7 +295,7 @@ function fxLoop(){
 // ============================================================
 // 🎛 PANNEAUX (classement / participants / stats)
 // ============================================================
-let openPanel = null; // 'ranking' | 'parts' | 'stats' | null
+let openPanel = null;
 
 function setPanel(name){
     openPanel = (openPanel === name) ? null : name;
@@ -326,12 +338,10 @@ function addParticipant(){
 function removeParticipant(name){
     withUndo(name + ' supprimé', ()=>{
         participants = participants.filter(p => p.name !== name);
-        // Retire aussi ses entrées des mois, sinon il reste au classement
+        // Retire aussi ses parties, sinon il reste au classement
         // et serait recréé automatiquement au prochain chargement.
         const norm = normName(name);
-        Object.keys(data).forEach(month=>{
-            data[month] = data[month].filter(n => normName(n) !== norm);
-        });
+        games = games.filter(g => normName(g.name) !== norm);
         saveParts(); saveData();
         renderParticipants(); render();
         Sound.del();
@@ -349,18 +359,16 @@ function changeGames(name, delta){
 
 function getParticipantStats(name){
     const norm = normName(name);
-    let wins = 0, gamesInData = 0;
-    Object.values(data).forEach(month=>{
-        month.forEach(n=>{
-            if(normName(n) === norm){
-                gamesInData++;
-                if(!n.includes('#')) wins++;
-            }
-        });
+    let wins = 0, played = 0;
+    games.forEach(g=>{
+        if(normName(g.name) === norm){
+            played++;
+            if(!g.passed) wins++;
+        }
     });
     const p = participants.find(p => normName(p.name) === norm);
     const extraGames = p ? (p.extraGames || 0) : 0;
-    return { wins, participations: gamesInData + extraGames };
+    return { wins, participations: played + extraGames };
 }
 
 function renderParticipants(){
@@ -390,7 +398,6 @@ function renderParticipants(){
                     : idx === 1 && stats.wins > 0 ? '🥈 '
                     : idx === 2 && stats.wins > 0 ? '🥉 ' : '';
 
-        // Échappé pour le JS inline PUIS pour le HTML (l'attribut décode les entités)
         const safeAttr = escapeHtml(p.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
 
         item.innerHTML = `
@@ -440,7 +447,7 @@ function openPlayerCard(name){
     const stats = getParticipantStats(name);
     const norm = normName(name);
     const monthly = monthOrder.map(m =>
-        data[m].filter(n => !n.includes('#') && normName(n) === norm).length
+        games.filter(g => !g.passed && normName(g.name) === norm && monthOfGame(g) === m).length
     );
     const winrate = stats.participations ? Math.round(stats.wins / stats.participations * 100) : 0;
     const ranking = computeRanking();
@@ -496,6 +503,7 @@ function openModal(action, title, initialValue="", extraData=null){
     renderSuggest(input.value);
     modal.classList.add("open");
 }
+function closeModal(){ document.getElementById("customModal").classList.remove("open"); currentAction = null; }
 
 // Suggestions de joueurs existants dans la modale (un clic = validé)
 function renderSuggest(filter=''){
@@ -516,15 +524,19 @@ function pickSuggest(name){
     document.getElementById('modalInput').value = name;
     document.getElementById('modalConfirmBtn').click();
 }
-function closeModal(){ document.getElementById("customModal").classList.remove("open"); currentAction = null; }
+
+function todayISO(){
+    const d = new Date();
+    const p = n => String(n).padStart(2,'0');
+    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
+}
 
 document.getElementById("modalConfirmBtn").onclick = () => {
     if(!currentAction) return;
     const inputVal = document.getElementById("modalInput").value.trim();
     if(currentAction.type === 'add' && inputVal){
-        const month = currentAction.month;
-        const canon = canonicalName(inputVal);   // « occxlt » → « Occult »
-        data[month].push(canon);
+        const canon = canonicalName(inputVal);
+        games.push({ name: canon, passed: false, date: todayISO() });
         if(!participants.find(p => sameNorm(p.name, canon))){
             participants.push({ name: canon, extraGames: 0 });
             saveParts();
@@ -535,14 +547,14 @@ document.getElementById("modalConfirmBtn").onclick = () => {
         if(normName(canon) !== normName(inputVal)){
             showToast('Compté pour ' + canon, { icon:'🔗' });
         }
-        if(data[month].length >= maxWins[month]){
+        if(games.length % 10 === 0){
             Sound.fanfare();
-            showToast(month + ' est complet ! 🏁', { icon:'🎉' });
+            showToast(games.length + ' parties jouées cette saison ! 🏁', { icon:'🎉' });
         }
     } else if(currentAction.type === 'edit' && inputVal){
         const canon = canonicalName(inputVal);
-        const oldName = data[currentAction.month][currentAction.index];
-        data[currentAction.month][currentAction.index] = canon + (oldName.includes("#") ? "#" : "");
+        const g = games[currentAction.index];
+        if(g) g.name = canon;
         if(!participants.find(p => sameNorm(p.name, canon))){
             participants.push({ name: canon, extraGames: 0 });
             saveParts();
@@ -553,7 +565,7 @@ document.getElementById("modalConfirmBtn").onclick = () => {
             showToast('Compté pour ' + canon, { icon:'🔗' });
         }
     } else if(currentAction.type === 'confirm_import'){
-        data = currentAction.newData; saveData();
+        games = currentAction.newGames; saveData();
         if(currentAction.newParticipants !== null && currentAction.newParticipants !== undefined){
             participants = currentAction.newParticipants; saveParts();
         }
@@ -574,7 +586,7 @@ document.getElementById("modalInput").addEventListener("input", e=>{
 // 💾 EXPORT / IMPORT
 // ============================================================
 function exportData(){
-    const backup = { data: data, participants: participants, exported: new Date().toISOString() };
+    const backup = { data: { v:2, games }, participants: participants, exported: new Date().toISOString() };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
     const dl = document.createElement('a');
     dl.setAttribute("href", dataStr); dl.setAttribute("download","mario_party_2026_backup.json");
@@ -587,14 +599,16 @@ function importData(input){
     reader.onload = e=>{
         try {
             const imported = JSON.parse(e.target.result);
-            if(imported.data && imported.data["Janvier"] && Array.isArray(imported.data["Janvier"])){
+            const fromData = imported.data ? normalizeGamesInput(imported.data) : null;
+            const direct   = normalizeGamesInput(imported);
+            if(fromData){
                 openModal('confirm_import','Restaurer ?','Cela écrasera les données actuelles.',{
-                    newData: imported.data,
+                    newGames: fromData,
                     newParticipants: imported.participants || []
                 });
-            } else if(imported["Janvier"] && Array.isArray(imported["Janvier"])){
+            } else if(direct){
                 openModal('confirm_import','Restaurer ?','Cela écrasera les données actuelles.',{
-                    newData: imported,
+                    newGames: direct,
                     newParticipants: null
                 });
             } else {
@@ -610,28 +624,25 @@ function importData(input){
 // ============================================================
 function computeRanking(){
     const counts = {}, displayNames = {};
-    Object.values(data).forEach(month=>{
-        month.forEach(name=>{
-            if(!name.includes("#")){
-                const clean = name.trim(), norm = normName(clean);
-                if(!counts[norm]){ counts[norm]=0; displayNames[norm]=clean; }
-                counts[norm]++;
-            }
-        });
+    games.forEach(g=>{
+        if(!g.passed && g.name){
+            const clean = String(g.name).trim(), norm = normName(clean);
+            if(!counts[norm]){ counts[norm]=0; displayNames[norm]=clean; }
+            counts[norm]++;
+        }
     });
-    // renvoie [nomAffiché, victoires] — le regroupement se fait sur le nom normalisé
     return Object.entries(counts)
         .map(([norm, c]) => [displayNames[norm], c])
         .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]));
 }
 
 function getChronology(){
-    const seq = [];
-    monthOrder.forEach(m => data[m].forEach(raw=>{
-        const clean = raw.replace('#','').trim();
-        seq.push({ month: m, name: clean, norm: normName(clean), win: !raw.includes('#') });
+    return games.map(g => ({
+        name: String(g.name).trim(),
+        norm: normName(g.name),
+        win: !g.passed,
+        month: monthOfGame(g)
     }));
-    return seq;
 }
 
 function computeStreaks(){
@@ -646,108 +657,100 @@ function computeStreaks(){
 }
 
 // ============================================================
-// 🖥 RENDER PRINCIPAL
+// 🖥 RENDER PRINCIPAL — cartes « Partie N »
 // ============================================================
 let firstRender = true;
 
 function updateYearProgress(){
-    const played = monthOrder.reduce((s,m)=>s+data[m].length,0);
-    const pct = Math.min(100, played/TOTAL_GAMES*100);
+    const played = games.length;
+    const pct = Math.min(100, played/SEASON_GOAL*100);
     document.getElementById('ypFill').style.width = pct + '%';
     document.getElementById('ypLabel').textContent =
-        `${played} / ${TOTAL_GAMES} parties — ${Math.round(pct)}%`;
+        played + ' partie' + (played>1?'s':'') + ' jouée' + (played>1?'s':'');
     document.getElementById('chipPlayed').textContent = played;
 }
 
 function render(){
     const container = document.getElementById("container"); container.innerHTML = "";
+
+    // 👑 rois du mois : 3+ victoires dans un même mois
+    const monthWins = {};
+    games.forEach(g=>{
+        if(!g.passed){
+            const k = (monthOfGame(g)||'?') + '|' + normName(g.name);
+            monthWins[k] = (monthWins[k]||0)+1;
+        }
+    });
+
     let prevNorm = null, runLen = 0;
     const seenWinners = new Set();
 
-    monthOrder.forEach((month, mi)=>{
-        const div = document.createElement("div");
-        div.className = "month season-" + MONTH_SEASON[month];
+    games.forEach((g, i)=>{
+        const m = monthOfGame(g);
+        const card = document.createElement("div");
+        card.className = "month game-card season-" + (m ? MONTH_SEASON[m] : "winter");
         if(firstRender && !REDUCED_MOTION){
-            div.classList.add("animate-in");
-            div.style.animationDelay = (mi*45)+"ms";
+            card.classList.add("animate-in");
+            card.style.animationDelay = (Math.min(i,20)*40)+"ms";
         }
-        const currentCount = data[month].length, maxCount = maxWins[month];
 
         const title = document.createElement("h2");
-        title.textContent = MONTH_EMOJI[month] + " " + month + " (" + currentCount + "/" + maxCount + ")";
-        div.appendChild(title);
+        title.textContent = "🎲 Partie " + (i+1);
+        card.appendChild(title);
 
-        const pct = Math.min(100,(currentCount/maxCount)*100);
-        const pc = document.createElement("div"); pc.className = "progress-container";
-        const pb = document.createElement("div"); pb.className = "progress-bar";
-        pb.style.width = pct+"%";
-        if(currentCount >= maxCount) pb.classList.add("full");
-        pc.appendChild(pb); div.appendChild(pc);
-
-        const monthWins = {};
-        data[month].forEach(n=>{
-            const k = normName(n);
-            if(!n.includes("#")) monthWins[k] = (monthWins[k]||0)+1;
-        });
+        const nName = normName(g.name);
+        let badges = "";
+        if(!g.passed){
+            if(nName === prevNorm) runLen++; else { prevNorm = nName; runLen = 1; }
+            if(!seenWinners.has(nName)){
+                badges += `<span class="badge" title="Première victoire de l'année">✨</span>`;
+                seenWinners.add(nName);
+            }
+            if(runLen >= 2) badges += `<span class="badge" title="En feu ! ${runLen} victoires d'affilée">🔥</span>`;
+            if(runLen >= 3) badges += `<span class="badge" title="Série de ${runLen} !">⚡</span>`;
+            if(monthWins[(m||'?')+'|'+nName] >= 3) badges += `<span class="badge" title="Roi du mois">👑</span>`;
+        }
 
         const ul = document.createElement("ul");
-        data[month].forEach((name,index)=>{
-            const li = document.createElement("li");
-            const span = document.createElement("span"); span.className = "name";
-            const isPassed = name.includes("#");
-            if(isPassed) span.classList.add("passed");
+        const li = document.createElement("li");
+        const span = document.createElement("span"); span.className = "name";
+        if(g.passed) span.classList.add("passed");
+        span.innerHTML = avatarHtml(g.name) + '<span class="name-txt">' + escapeHtml(g.name) + '</span>' + badges;
+        span.title = "Cliquer pour marquer absent / présent";
+        span.onclick = ()=>{ g.passed = !g.passed; saveData(); render(); Sound.click(); };
 
-            const cleanName = name.replace("#","").trim();
-            const nName     = normName(cleanName);
-
-            let badges = "";
-            if(!isPassed){
-                if(nName === prevNorm) runLen++; else { prevNorm = nName; runLen = 1; }
-                if(!seenWinners.has(nName)){
-                    badges += `<span class="badge" title="Première victoire de l'année">✨</span>`;
-                    seenWinners.add(nName);
-                }
-                if(runLen >= 2) badges += `<span class="badge" title="En feu ! ${runLen} victoires d'affilée">🔥</span>`;
-                if(runLen >= 3) badges += `<span class="badge" title="Série de ${runLen} !">⚡</span>`;
-                if(monthWins[nName] >= 3) badges += `<span class="badge" title="Roi du mois">👑</span>`;
-            }
-
-            span.innerHTML = avatarHtml(cleanName) + '<span class="name-txt">' + escapeHtml(cleanName) + '</span>' + badges;
-            span.onclick = ()=>{
-                data[month][index] = isPassed ? name.replace("#","") : name+"#";
-                saveData(); render();
-                Sound.click();
-            };
-
-            const bc = document.createElement("div"); bc.className = "buttons";
-            const eb = document.createElement("button"); eb.textContent="✏"; eb.className="edit-btn";
-            eb.onclick = ()=>{ openModal('edit','Modifier',cleanName,{month,index}); };
-            const db = document.createElement("button"); db.textContent="🗑"; db.className="delete-btn";
-            db.onclick = ()=>{
-                withUndo(cleanName + ' supprimé de ' + month, ()=>{
-                    data[month].splice(index,1); saveData(); render();
-                    Sound.del();
-                });
-            };
-            bc.appendChild(eb); bc.appendChild(db);
-            li.appendChild(span); li.appendChild(bc); ul.appendChild(li);
-        });
-        if(!data[month].length){
-            const empty = document.createElement("li");
-            empty.className = "empty-slot";
-            empty.textContent = "Aucune partie jouée";
-            ul.appendChild(empty);
-        }
-        div.appendChild(ul);
-
-        const ab = document.createElement("button"); ab.textContent="➕ Ajouter"; ab.className="add-btn";
-        if(currentCount >= maxCount){ ab.disabled=true; ab.textContent="🔒 Complet"; }
-        ab.onclick = ()=>{
-            if(data[month].length >= maxWins[month]) return;
-            openModal('add','Ajouter ('+month+')','',{month});
+        const bc = document.createElement("div"); bc.className = "buttons";
+        const eb = document.createElement("button"); eb.textContent="✏"; eb.className="edit-btn";
+        eb.onclick = ()=>{ openModal('edit','Partie '+(i+1)+' — modifier', String(g.name), {index:i}); };
+        const db = document.createElement("button"); db.textContent="🗑"; db.className="delete-btn";
+        db.onclick = ()=>{
+            withUndo('Partie '+(i+1)+' supprimée', ()=>{
+                games.splice(i,1); saveData(); render();
+                Sound.del();
+            });
         };
-        div.appendChild(ab); container.appendChild(div);
+        bc.appendChild(eb); bc.appendChild(db);
+        li.appendChild(span); li.appendChild(bc); ul.appendChild(li);
+        card.appendChild(ul);
+
+        const dt = document.createElement("div"); dt.className = "game-date";
+        const dtxt = gameDateText(g);
+        dt.textContent = dtxt ? "📅 " + dtxt : "📅 —";
+        card.appendChild(dt);
+
+        container.appendChild(card);
     });
+
+    // Carte « Nouvelle partie » (toujours en dernier, illimité)
+    const addCard = document.createElement("button");
+    addCard.className = "add-game-card";
+    if(firstRender && !REDUCED_MOTION){
+        addCard.classList.add("animate-in");
+        addCard.style.animationDelay = (Math.min(games.length,21)*40)+"ms";
+    }
+    addCard.innerHTML = '<span class="agc-plus">＋</span><span>Nouvelle partie</span><small>La date du jour sera enregistrée</small>';
+    addCard.onclick = ()=> openModal('add', 'Partie ' + (games.length+1) + ' — vainqueur');
+    container.appendChild(addCard);
 
     firstRender = false;
     updateYearProgress();
@@ -816,9 +819,8 @@ function updateRanking(){
 // ============================================================
 function renderStats(){
     const el = document.getElementById('statsContent');
-    const chrono = getChronology();
-    const played = chrono.length;
-    const winsCount = chrono.filter(e=>e.win).length;
+    const played = games.length;
+    const winsCount = games.filter(g=>!g.passed).length;
     const ranking = computeRanking();
     const { current, best } = computeStreaks();
 
@@ -828,7 +830,7 @@ function renderStats(){
 
     const cards = `
         <div class="stat-cards">
-            <div class="stat-card"><b>${played}<small>/${TOTAL_GAMES}</small></b><span>Parties jouées</span></div>
+            <div class="stat-card"><b>${played}</b><span>Parties jouées</span></div>
             <div class="stat-card"><b>${winsCount}</b><span>Victoires</span></div>
             <div class="stat-card"><b>${participants.length}</b><span>Joueurs</span></div>
             <div class="stat-card"><b>${ranking.length}</b><span>Vainqueurs distincts</span></div>
@@ -837,18 +839,16 @@ function renderStats(){
             <div class="stat-card wide"><b>${bestTxt}</b><span>Record de série (année)</span></div>
         </div>`;
 
+    const perMonth = monthOrder.map(m => games.filter(g => monthOfGame(g) === m).length);
+    const maxM = Math.max(1, ...perMonth);
     const mChart = `
         <div class="stats-block">
             <div class="stats-block-title">Parties par mois</div>
-            <div class="mchart">${monthOrder.map(m=>{
-                const c = data[m].length, mx = maxWins[m];
-                return `<div class="mc-col" title="${m} : ${c}/${mx}">
-                    <div class="mc-track" style="height:${mx/5*100}%">
-                        <div class="mc-fill${c>=mx?' full':''}" style="height:${mx ? c/mx*100 : 0}%"></div>
-                    </div>
+            <div class="mchart">${monthOrder.map((m,i)=>`
+                <div class="mc-col" title="${m} : ${perMonth[i]} partie${perMonth[i]>1?'s':''}">
+                    <div class="mc-track"><div class="mc-fill" style="height:${perMonth[i]/maxM*100}%"></div></div>
                     <span class="mc-lbl">${m.slice(0,1)}</span>
-                </div>`;
-            }).join('')}</div>
+                </div>`).join('')}</div>
         </div>`;
 
     const maxW = ranking.length ? ranking[0][1] : 1;
@@ -887,7 +887,6 @@ const twStatic = [
     "🎉 Pas de pitié, même entre amis !",
 ];
 
-// Phrases générées depuis les données réelles du championnat
 function twDynamic(){
     const msgs = [];
     const ranking = computeRanking();
@@ -906,11 +905,9 @@ function twDynamic(){
     if(current.len >= 2) msgs.push(`🔥 ${cap(current.name)} enchaîne ${current.len} victoires !`);
     if(best.len >= 3)    msgs.push(`⚡ Record de l'année : ${best.len} d'affilée pour ${cap(best.name)} !`);
 
-    const played = monthOrder.reduce((s,m)=>s+data[m].length,0);
-    const left = TOTAL_GAMES - played;
-    if(played === 0)   msgs.push("🚦 La saison 2026 va commencer !");
-    else if(left > 0)  msgs.push(`⏳ Encore ${left} partie${left>1?'s':''} avant le verdict final…`);
-    else               msgs.push("🏁 Saison terminée ! Bravo au champion !");
+    const played = games.length;
+    if(played === 0) msgs.push("🚦 La saison 2026 va commencer !");
+    else             msgs.push(`🎲 Déjà ${played} partie${played>1?'s':''} cette saison !`);
     return msgs;
 }
 
@@ -931,8 +928,8 @@ function typeEffect(){
     if(!twDeleting){
         twChar++;
         twEl.textContent = twChars.slice(0, twChar).join('');
-        delay = 55 + Math.random()*70;                       // frappe humaine, vitesse variable
-        if(",;:!?…".includes(twChars[twChar-1])) delay += 220; // pause sur la ponctuation
+        delay = 55 + Math.random()*70;
+        if(",;:!?…".includes(twChars[twChar-1])) delay += 220;
         if(twChar >= twChars.length){ twDeleting = true; delay = 2300; }
     } else {
         twChar--;
@@ -973,7 +970,7 @@ if(!IS_DEV){
 }
 
 // ============================================================
-// 🌌 FOND ÉTOILÉ ANIMÉ
+// 🌌 FOND — confettis pastel flottants
 // ============================================================
 const bgCanvas = document.getElementById('bgCanvas');
 const bctx = bgCanvas.getContext('2d');
